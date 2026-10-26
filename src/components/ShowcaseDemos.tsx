@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { ReertsLogo } from "@/components/ReertsLogo";
 import { 
   ArrowRight, 
   Sparkles, 
@@ -34,20 +35,7 @@ export function ShowcaseDemos() {
     <section id="showcase-demos" className="border-t border-border py-20 bg-background">
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 text-center mb-16">
         <div className="flex items-center gap-2">
-          <Image
-            src="/images/logos/logo-light-svg.svg"
-            alt="reerts"
-            width={32}
-            height={32}
-            className="rounded-md dark:hidden"
-          />
-          <Image
-            src="/images/logos/logo-dark-svg.svg"
-            alt="reerts"
-            width={32}
-            height={32}
-            className="rounded-md hidden dark:block"
-          />
+          <ReertsLogo iconClassName="size-8 sm:size-9 object-contain" />
         </div>
         <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Wait, it does that too?
@@ -64,8 +52,8 @@ export function ShowcaseDemos() {
         <div className="grid w-full items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
             <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
-              <Image src="/images/logos/logo-light-svg.svg" alt="" width={14} height={14} className="dark:hidden" />
-              <Image src="/images/logos/logo-dark-svg.svg" alt="" width={14} height={14} className="hidden dark:block" />
+              <Image src="/images/logos/reerts-symbol-black.svg" alt="" width={14} height={14} className="size-3.5 object-contain dark:hidden" />
+              <Image src="/images/logos/reerts-symbol-white.svg" alt="" width={14} height={14} className="size-3.5 object-contain hidden dark:block" />
               AI Carousel Maker
             </span>
 

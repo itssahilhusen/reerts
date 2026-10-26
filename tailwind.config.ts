@@ -10,8 +10,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        border: "rgb(var(--border-rgb) / <alpha-value>)",
-        input: "rgb(var(--border-rgb) / <alpha-value>)",
+        border: "var(--border)",
+        input: "var(--input)",
         ring: "rgb(var(--ring-rgb) / <alpha-value>)",
         background: "rgb(var(--background-rgb) / <alpha-value>)",
         foreground: "rgb(var(--foreground-rgb) / <alpha-value>)",
@@ -46,6 +46,7 @@ const config: Config = {
         sidebar: {
           DEFAULT: "rgb(var(--sidebar-rgb) / <alpha-value>)",
           foreground: "rgb(var(--sidebar-foreground-rgb) / <alpha-value>)",
+          border: "var(--sidebar-border)",
         },
       },
       fontFamily: {

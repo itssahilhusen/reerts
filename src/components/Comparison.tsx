@@ -2,199 +2,303 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { Check, X, Sparkles, ChevronDown } from "lucide-react";
+import {
+  Route,
+  Wand2,
+  LayoutGrid,
+  Scissors,
+  Film,
+  Bot,
+  Calendar,
+  MessageCircle,
+  BarChart3,
+  Send,
+  Eye,
+  Rss,
+  Users,
+  Info,
+  ChevronDown,
+} from "lucide-react";
 import { ReertsLogo } from "@/components/ReertsLogo";
+import { competitors, comparisonRows, ComparisonCell } from "@/data/comparisonData";
+
+const iconMap: Record<string, React.ReactNode> = {
+  route: <Route className="hidden size-4 shrink-0 sm:block" />,
+  wand: <Wand2 className="hidden size-4 shrink-0 sm:block" />,
+  "carousel-horizontal": <LayoutGrid className="hidden size-4 shrink-0 sm:block" />,
+  scissors: <Scissors className="hidden size-4 shrink-0 sm:block" />,
+  movie: <Film className="hidden size-4 shrink-0 sm:block" />,
+  robot: <Bot className="hidden size-4 shrink-0 sm:block" />,
+  calendar: <Calendar className="hidden size-4 shrink-0 sm:block" />,
+  "message-circle": <MessageCircle className="hidden size-4 shrink-0 sm:block" />,
+  "chart-bar": <BarChart3 className="hidden size-4 shrink-0 sm:block" />,
+  spy: <Eye className="hidden size-4 shrink-0 sm:block" />,
+  rss: <Rss className="hidden size-4 shrink-0 sm:block" />,
+  users: <Users className="hidden size-4 shrink-0 sm:block" />,
+};
+
+function StatusIcon({ cell }: { cell?: ComparisonCell }) {
+  if (!cell) {
+    return (
+      <svg
+        className="size-6 text-muted-foreground/50 mx-auto"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="m10 10 4 4m0-4-4 4" />
+      </svg>
+    );
+  }
+
+  if (cell.status === "Coming soon") {
+    return (
+      <span className="inline-flex max-w-full items-center justify-center align-middle">
+        <span className="inline-flex items-center justify-center rounded-md border border-transparent bg-primary text-primary-foreground max-w-full px-1.5 py-0.5 text-center text-[10px] leading-tight font-medium whitespace-normal sm:text-xs">
+          Coming soon
+        </span>
+      </span>
+    );
+  }
+
+  if (cell.status === "Supported") {
+    return (
+      <svg
+        className="size-6 text-foreground mx-auto"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+      >
+        <path d="M17 3.34a10 10 0 1 1 -14.995 8.984l-.005 -.324l.005 -.324a10 10 0 0 1 14.995 -8.336zm-1.293 5.953a1 1 0 0 0 -1.32 -.083l-.094 .083l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.403 1.403l.083 .094l2 2l.094 .083a1 1 0 0 0 1.226 0l.094 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" />
+      </svg>
+    );
+  }
+
+  if (cell.status === "Partial") {
+    return (
+      <svg
+        className="size-6 text-muted-foreground mx-auto"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <line x1="9" y1="12" x2="15" y2="12" />
+      </svg>
+    );
+  }
+
+  // Outside scope
+  return (
+    <svg
+      className="size-6 text-muted-foreground mx-auto"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="m10 10 4 4m0-4-4 4" />
+    </svg>
+  );
+}
 
 export function Comparison() {
-  const competitors = [
-    { id: "buffer", name: "Buffer", logo: "/images/competitors/buffer.svg" },
-    { id: "manychat", name: "Manychat", logo: "/images/competitors/manychat.svg" },
-    { id: "opusclip", name: "Opusclip", logo: "/images/competitors/opusclip.png" },
-    { id: "hootsuite", name: "Hootsuite", logo: "/images/competitors/hootsuite.png" },
-    { id: "later", name: "Later", logo: "/images/competitors/later.png" },
-    { id: "metricool", name: "Metricool", logo: "/images/competitors/metricool.png" },
-    { id: "postiz", name: "Postiz", logo: "/images/competitors/postiz.png" },
-    { id: "typefully", name: "Typefully", logo: "/images/competitors/typefully.png" },
-    { id: "postbridge", name: "Postbridge", logo: "/images/competitors/postbridge.png" },
-  ];
-
   const [selectedCompetitor, setSelectedCompetitor] = useState("buffer");
-
-  const comparisonRows = [
-    {
-      feature: "Automated Marketing Pipeline",
-      description: "Auto-collects ideas, drafts posts, schedules, and feeds back insights",
-      reerts: true,
-      competitors: { buffer: false, manychat: false, opusclip: false, hootsuite: false, later: false, metricool: false, postiz: false, typefully: false, postbridge: false },
-    },
-    {
-      feature: "Trained Brand-Voice Writing",
-      description: "AI that speaks exactly like your personal style or brand persona",
-      reerts: true,
-      competitors: { buffer: false, manychat: false, opusclip: false, hootsuite: false, later: false, metricool: false, postiz: false, typefully: true, postbridge: false },
-    },
-    {
-      feature: "AI Carousel Maker",
-      description: "Turns URLs, thoughts, or articles into styled multi-slide carousels",
-      reerts: true,
-      competitors: { buffer: false, manychat: false, opusclip: false, hootsuite: false, later: false, metricool: false, postiz: false, typefully: false, postbridge: false },
-    },
-    {
-      feature: "Comment-to-DM & Auto-reply Automation",
-      description: "Send lead magnets, links, and replies automatically when followers comment",
-      reerts: true,
-      competitors: { buffer: false, manychat: true, opusclip: false, hootsuite: false, later: false, metricool: false, postiz: false, typefully: false, postbridge: false },
-    },
-    {
-      feature: "Multi-Platform Scheduling",
-      description: "Native scheduling for X, LinkedIn, Threads, Instagram, TikTok, YouTube & Facebook",
-      reerts: true,
-      competitors: { buffer: true, manychat: false, opusclip: false, hootsuite: true, later: true, metricool: true, postiz: true, typefully: false, postbridge: true },
-    },
-    {
-      feature: "1-Click Saved Links to Drafts",
-      description: "Share any webpage directly to your queue and get an AI draft in seconds",
-      reerts: true,
-      competitors: { buffer: false, manychat: false, opusclip: false, hootsuite: false, later: false, metricool: false, postiz: false, typefully: false, postbridge: false },
-    },
-    {
-      feature: "Competitor Tracking & Content Remixing",
-      description: "Follow competitor accounts and remix high-performing frameworks",
-      reerts: true,
-      competitors: { buffer: false, manychat: false, opusclip: false, hootsuite: false, later: false, metricool: false, postiz: false, typefully: false, postbridge: false },
-    },
-    {
-      feature: "Passwordless Client Account Invites",
-      description: "Invite clients to connect their social channels without sharing passwords",
-      reerts: true,
-      competitors: { buffer: false, manychat: false, opusclip: false, hootsuite: false, later: false, metricool: false, postiz: false, typefully: false, postbridge: false },
-    },
-  ];
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   return (
-    <section id="comparison" aria-labelledby="comparison-title" className="border-t border-border bg-muted/20 px-4 py-16 sm:py-20">
+    <section
+      id="comparison"
+      aria-labelledby="comparison-title"
+      className="border-t border-border bg-muted/20 px-4 py-16 sm:py-20"
+    >
       <div className="mx-auto max-w-7xl">
-        <div className="mx-auto mb-10 max-w-3xl text-center">
+        {/* Header */}
+        <div className="mx-auto mb-8 max-w-3xl text-center">
           <div className="flex items-center gap-2 mb-3 justify-center">
-            <ReertsLogo iconClassName="size-8" showText={false} />
+            <ReertsLogo iconClassName="size-8 sm:size-9 object-contain" />
           </div>
-          <h2 id="comparison-title" className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2
+            id="comparison-title"
+            className="text-3xl font-bold tracking-tight text-foreground text-balance sm:text-4xl"
+          >
             See why reerts is the best choice.
           </h2>
-          <p className="mt-3 text-base text-muted-foreground">
-            Compare content creation, scheduling, engagement, automation, and analytics—all in one unified platform.
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground text-pretty">
+            Compare content creation, scheduling, engagement, automation, and
+            analytics—all in one view.
           </p>
         </div>
 
-        {/* Mobile View: Competitor selector */}
-        <div className="mb-6 flex flex-col gap-2 lg:hidden">
-          <label className="text-sm font-medium text-foreground">Select Competitor to Compare:</label>
+        {/* Mobile View: Select Dropdown */}
+        <div className="mb-4 flex w-full items-center justify-between gap-3 lg:hidden">
+          <label id="comparison-select-label" className="text-sm font-medium">
+            Compare with
+          </label>
           <div className="relative">
             <select
               value={selectedCompetitor}
               onChange={(e) => setSelectedCompetitor(e.target.value)}
-              className="w-full appearance-none rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground outline-none shadow-xs"
+              className="appearance-none rounded-md border border-input bg-card px-3 py-2 text-sm font-medium text-foreground outline-none shadow-xs w-44 pr-8 focus-visible:ring-1 focus-visible:ring-ring"
+              aria-labelledby="comparison-select-label"
             >
               {competitors.map((c) => (
                 <option key={c.id} value={c.id}>
-                  Compare vs {c.name}
+                  {c.name}
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-          </div>
-
-          {/* Mobile Cards */}
-          <div className="mt-4 space-y-3">
-            {comparisonRows.map((row, idx) => {
-              const compValue = (row.competitors as Record<string, boolean>)[selectedCompetitor];
-              return (
-                <div key={idx} className="rounded-xl border border-border bg-card p-4 shadow-2xs">
-                  <div className="font-semibold text-sm text-foreground mb-1">{row.feature}</div>
-                  <p className="text-xs text-muted-foreground mb-3">{row.description}</p>
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50 text-xs">
-                    <div className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10">
-                        <Check className="h-3.5 w-3.5" />
-                      </div>
-                      reerts: Yes
-                    </div>
-                    <div className="flex items-center gap-1.5 font-medium text-muted-foreground">
-                      <div className={`flex h-5 w-5 items-center justify-center rounded-full ${compValue ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground/60"}`}>
-                        {compValue ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-                      </div>
-                      {competitors.find((c) => c.id === selectedCompetitor)?.name}: {compValue ? "Yes" : "No"}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-2.5 size-4 text-muted-foreground opacity-50" />
           </div>
         </div>
 
-        {/* Desktop View: Full Grid Matrix */}
-        <div className="hidden lg:block overflow-x-auto rounded-2xl border border-border bg-card shadow-sm scrollbar-thin">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="p-4 pl-6 text-sm font-semibold text-foreground w-[320px]">
-                  Feature Capability
-                </th>
-                <th className="p-4 text-center bg-primary/10 border-x border-primary/20 w-[140px]">
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="flex items-center gap-1.5">
-                      <ReertsLogo iconClassName="size-4" showText={false} />
-                      <span className="font-bold text-sm text-primary">reerts</span>
-                    </div>
-                    <span className="text-[10px] rounded-full bg-primary text-primary-foreground px-2 py-0.5 font-medium">All-in-one</span>
-                  </div>
-                </th>
-                {competitors.map((c) => (
-                  <th key={c.id} className="p-4 text-center text-xs font-medium text-muted-foreground">
-                    <div className="flex flex-col items-center gap-1.5">
-                      <div className="flex h-7 w-7 items-center justify-center">
-                        <Image src={c.logo} alt={c.name} width={22} height={22} className="object-contain" />
-                      </div>
-                      <span>{c.name}</span>
+        {/* Comparison Table */}
+        <div className="overflow-hidden rounded-lg border border-foreground/20 bg-card">
+          <div className="relative w-full overflow-x-auto">
+            <table
+              className="w-full caption-bottom text-sm table-fixed"
+              aria-labelledby="comparison-title"
+            >
+              <thead className="[&_tr]:border-b">
+                <tr className="border-b transition-colors border-foreground/20 hover:bg-transparent">
+                  {/* Features Column Head */}
+                  <th
+                    className="text-foreground h-10 text-left align-middle w-[44%] px-3 py-5 text-sm font-medium whitespace-normal lg:w-[28%] lg:px-4"
+                    scope="col"
+                  >
+                    Features
+                  </th>
+
+                  {/* reerts Column Head */}
+                  <th
+                    className="text-foreground h-10 align-middle font-medium border-l border-foreground/15 text-center whitespace-normal bg-muted/60 table-cell px-1.5 py-5"
+                    scope="col"
+                  >
+                    <div className="flex items-center flex-col justify-center gap-1.5">
+                      <ReertsLogo iconClassName="size-6 sm:size-7 object-contain" />
                     </div>
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border text-sm">
-              {comparisonRows.map((row, idx) => (
-                <tr key={idx} className="hover:bg-muted/30 transition-colors">
-                  <td className="p-4 pl-6">
-                    <div className="font-semibold text-foreground text-sm">{row.feature}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{row.description}</div>
-                  </td>
-                  <td className="p-4 text-center bg-primary/5 border-x border-primary/20">
-                    <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                      <Check className="h-4 w-4 stroke-[2.5]" />
-                    </div>
-                  </td>
+
+                  {/* Competitor Column Heads */}
                   {competitors.map((c) => {
-                    const hasFeature = (row.competitors as Record<string, boolean>)[c.id];
+                    const isSelected = c.id === selectedCompetitor;
                     return (
-                      <td key={c.id} className="p-4 text-center">
-                        <div className="flex justify-center">
-                          {hasFeature ? (
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-                              <Check className="h-3.5 w-3.5" />
-                            </div>
-                          ) : (
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/30">
-                              <X className="h-3.5 w-3.5" />
-                            </div>
-                          )}
-                        </div>
-                      </td>
+                      <th
+                        key={c.id}
+                        className={`text-foreground h-10 align-middle font-medium border-l border-foreground/15 text-center whitespace-normal bg-card px-1.5 py-5 ${
+                          isSelected ? "table-cell" : "hidden lg:table-cell"
+                        }`}
+                        scope="col"
+                      >
+                        <a
+                          href={c.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`${c.name} official features`}
+                          className="inline-flex flex-col items-center justify-center gap-1.5 rounded-sm text-xs font-bold tracking-tight underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring xl:text-sm"
+                        >
+                          <Image
+                            src={c.logo}
+                            alt=""
+                            width={24}
+                            height={24}
+                            className="size-6 shrink-0 object-contain dark:brightness-0 dark:invert"
+                          />
+                          <span>{c.name}</span>
+                        </a>
+                      </th>
                     );
                   })}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody className="[&_tr:last-child]:border-0">
+                {comparisonRows.map((row, rIdx) => {
+                  const reertsCell = row.values.reerts;
+                  return (
+                    <tr
+                      key={rIdx}
+                      className="border-b transition-colors border-foreground/10 hover:bg-muted/30"
+                    >
+                      {/* Feature Name Cell */}
+                      <th
+                        className="text-foreground text-left align-middle h-auto px-3 py-2 text-xs font-medium whitespace-normal sm:text-sm lg:px-4"
+                        scope="row"
+                      >
+                        <div
+                          className="group relative flex min-h-8 w-full items-center gap-2 rounded-sm text-left cursor-help"
+                          onClick={() =>
+                            setActiveTooltip(
+                              activeTooltip === `feat_${rIdx}`
+                                ? null
+                                : `feat_${rIdx}`
+                            )
+                          }
+                          title={reertsCell?.note}
+                        >
+                          {iconMap[row.icon] || (
+                            <Wand2 className="hidden size-4 shrink-0 sm:block" />
+                          )}
+                          <span className="min-w-0 leading-snug break-words">
+                            {row.feature}
+                          </span>
+                          <Info className="size-3.5 shrink-0 text-muted-foreground group-hover:text-foreground opacity-70" />
+                        </div>
+                      </th>
+
+                      {/* reerts Cell */}
+                      <td
+                        className="p-2 align-middle border-l border-foreground/15 text-center whitespace-normal bg-muted/60 table-cell px-1.5 py-2.5 relative group cursor-help"
+                        title={reertsCell?.note}
+                        onClick={() =>
+                          setActiveTooltip(
+                            activeTooltip === `reerts_${rIdx}`
+                              ? null
+                              : `reerts_${rIdx}`
+                          )
+                        }
+                      >
+                        <StatusIcon cell={reertsCell} />
+                      </td>
+
+                      {/* Competitor Cells */}
+                      {competitors.map((c) => {
+                        const cell = row.values[c.id];
+                        const isSelected = c.id === selectedCompetitor;
+                        return (
+                          <td
+                            key={c.id}
+                            className={`p-2 align-middle border-l border-foreground/15 text-center whitespace-normal bg-card px-1.5 py-2.5 relative group cursor-help ${
+                              isSelected ? "table-cell" : "hidden lg:table-cell"
+                            }`}
+                            title={cell?.note || cell?.status}
+                            onClick={() =>
+                              setActiveTooltip(
+                                activeTooltip === `${c.id}_${rIdx}`
+                                  ? null
+                                  : `${c.id}_${rIdx}`
+                              )
+                            }
+                          >
+                            <StatusIcon cell={cell} />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>

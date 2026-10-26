@@ -2,129 +2,179 @@
 
 import React from "react";
 import Image from "next/image";
-import { ExternalLink, Star } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import { ReertsLogo } from "@/components/ReertsLogo";
 
 export function Reviews() {
   const reviews = [
     {
       handle: "manyjjju_yaksa",
       avatar: "/images/testimonials/manyjjju_yaksa.jpg",
-      url: "https://www.threads.com/@manyjjju_yaksa",
-      platform: "Threads",
-      text: "Threads fam, have you tried REERTS? I had no clue how to look back through my old Threads posts and organize them — this tool was a total lifesaver. Posts, views, shares, comments — all in one place. Seriously so convenient. Not an ad! I just love it.",
+      url: "https://www.threads.com/@manyjjju_yaksa/post/DbqelWak7D3",
+      text: `Threads fam, have you tried REERTS?
+I had no clue how to look back through my old Threads posts and organize them —
+this tool was a total lifesaver.
+Posts, views, shares, comments — all in one place. Seriously so convenient.
+Not an ad! I just love it and had to recommend it ^^
+Thank you to the founder 🫶🏻💕
+@reerts.com_`,
     },
     {
       handle: "oliviandtilly",
       avatar: "/images/testimonials/oliviandtilly.jpg",
-      url: "https://www.threads.com/@oliviandtilly",
-      platform: "LinkedIn / Threads",
-      text: "As an indie brand owner, posting consistently on 4 channels every day felt like a second full-time job. With reerts, I queue my week in 30 minutes on Sunday. Game changer.",
+      url: "https://www.threads.com/@oliviandtilly/post/DZHZLO6mMEq",
+      text: `1. It's fast - the moment I set up the account and linked my threads, it shows immediately the view of when/how I've posted. No load time. it was an instant access. impressive.
+
+2. the UX/UI is clean and simple - easy to follow for neurodivergent me!
+
+3. being able to filter out 'unanswered only' comment is genius - not seen this before elsewhere.
+
+I will be considering this in as a contender against meticool and buffer!`,
     },
     {
-      handle: "undertow-io",
+      handle: "undertow.io",
       avatar: "/images/testimonials/undertow-io.jpg",
-      url: "https://www.threads.com/@undertow.io",
-      platform: "X / LinkedIn",
-      text: "The carousel maker alone is worth 10x the price. I paste my release notes and get a sleek 6-slide deck ready for LinkedIn. Saved us at least 15 design hours this month.",
+      url: "https://www.threads.com/@undertow.io/post/DOqPRf0k-iJ",
+      text: `Ever had this experience?
+
+Logging into every SNS separately,
+using another tool just to schedule,
+and exporting data… only to organize it in Excel.
+
+At some point you realize:
+"Wait, I'm spending more time managing content than creating it."
+
+…
+
+If running SNS is draining your time and energy,
+it might be worth giving reerts a try.`,
     },
     {
       handle: "wolhavest",
       avatar: "/images/testimonials/wolhavest.jpg",
-      url: "https://www.threads.com/@wolhavest",
-      platform: "Threads",
-      text: "Hook scoring is spooky accurate. The posts it rates 90+ consistently get 3-5x the impressions of my manual drafts. The brand voice adaptation is unmatched.",
+      url: "https://www.threads.com/@wolhavest/post/DScainqkjwi",
+      text: `This one post might change how you manage Threads.
+
+Current Threads pain points:
+1. Finding old posts is a nightmare (biggest one)
+2. Manual tracking for post time & volume
+3. Engagement stats hidden behind too many clicks
+4. Easy to miss replies when comments pile up
+5. Hard to track specific Threaders
+
+I've been managing all this in Notion 😭
+Found a site that fixes all of it.
+
+No affiliation. Used it for a week.
+Highly recommend.`,
     },
     {
       handle: "iooo_ttt",
       avatar: "/images/testimonials/iooo_ttt.jpg",
-      url: "https://www.threads.com/@iooo_ttt",
-      platform: "Instagram / X",
-      text: "Finally a social tool that doesn't trigger reach penalties. Uses official APIs and the auto-DM keyword feature brought in 400+ email signups on our last launch alone.",
+      url: "https://www.threads.com/@iooo_tttt/post/DPqPCsJEjZT",
+      text: `Lately, I've been loving this Threads companion tool: REERTS.
+
+- Supports thread-style replies in comments
+- Topic tagging built in
+- Schedule posts with media attached
+
+Threads' native scheduler has been flaky for me (lost posts more than once),
+but REERTS hasn't failed me a single time.
+
+The calendar helps me post steadily,
+and the analytics are solid too.
+
+100% honest review.
+No strings attached 🙂`,
     },
     {
       handle: "homebodify",
       avatar: "/images/testimonials/homebodify.jpg",
-      url: "https://www.threads.com/@homebodify",
-      platform: "Agency Owner",
-      text: "Connecting client social accounts without asking for their passwords changed our agency workflow completely. Client onboarding went from 3 days to 2 minutes.",
+      url: "https://www.threads.com/@homebodify/post/DSCXHdFEi3x",
+      text: `I'm a big fan of scheduled posts.
+
+Even when things get busy, having posts scheduled means I never miss publishing and staying visible.
+
+I've wanted to post on my main account too, but I wanted those posts to be more polished.
+
+Now, with @reerts_, I can do that via scheduled LinkedIn posts.
+
+If you want to build consistency with scheduled posts, I'd definitely recommend it.`,
     },
     {
       handle: "figuwang",
       avatar: "/images/testimonials/figuwang.jpg",
-      url: "https://www.threads.com/@figuwang",
-      platform: "Founder",
-      text: "Best social marketing automation tool on the market right now. Clean UI, fast, dark mode is pristine, and it does exactly what it promises without fluff.",
+      url: "https://www.threads.com/@figuwang/post/DO9m9PACltf",
+      text: `Suddenly trying out a thread tool: reerts.
+
+After getting into VibeCoding and doing some projects, I kept thinking I should make something myself too.
+
+But then I realized:
+I use SNS a lot, so maybe I should first build a tool I actually need.
+
+I even added “thread publishing tool” to my to-do list…
+but after trying reerts, looks like I don't need to make one myself lol.`,
     },
   ];
 
   return (
-    <section id="reviews" className="relative w-full border-t border-border bg-muted/30 py-16 sm:py-24 overflow-hidden">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 mb-12 text-center">
-        <div className="flex items-center gap-2 mb-3 justify-center">
-          <Image
-            src="/images/logos/logo-light.png"
-            alt="reerts"
-            width={32}
-            height={32}
-            className="rounded-md dark:hidden"
-          />
-          <Image
-            src="/images/logos/logo-dark.png"
-            alt="reerts"
-            width={32}
-            height={32}
-            className="rounded-md hidden dark:block"
-          />
+    <section
+      id="reviews"
+      className="relative w-full border-t border-border bg-muted/30 py-16 sm:py-24 overflow-hidden"
+    >
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="text-center mb-12">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center justify-center">
+              <ReertsLogo iconClassName="size-8 sm:size-9 object-contain" />
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              User Reviews
+            </h2>
+          </div>
         </div>
-        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          User Reviews
-        </h2>
-        <p className="mt-2 text-base text-muted-foreground">
-          What active founders and growth marketers say about automating their pipeline.
-        </p>
       </div>
 
-      {/* Infinite Horizontal Marquee */}
-      <div className="flex overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-        <div className="flex shrink-0 animate-marquee gap-4 py-2 hover:[animation-play-state:paused]">
+      {/* Infinite Horizontal Marquee Carousel */}
+      <div className="flex overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">
+        <div className="flex shrink-0 animate-marquee py-2 hover:[animation-play-state:paused]">
           {reviews.concat(reviews).map((rev, i) => (
             <div
               key={i}
-              className="w-[280px] sm:w-[360px] shrink-0 rounded-2xl border border-border bg-card p-5 shadow-sm hover:border-primary/40 hover:shadow-md transition-all flex flex-col justify-between"
+              className="flex-shrink-0 w-[280px] sm:w-[360px] mx-2 sm:mx-3"
             >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <Image
-                      src={rev.avatar}
-                      alt={rev.handle}
-                      width={40}
-                      height={40}
-                      className="rounded-full bg-muted object-cover"
-                    />
-                    <div>
-                      <h4 className="font-semibold text-sm text-foreground">{rev.handle}</h4>
-                      <p className="text-[11px] text-muted-foreground">{rev.platform}</p>
+              <a
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="block h-full group"
+                href={rev.url}
+              >
+                <article className="bg-card hover:bg-primary/5 rounded-xl p-4 sm:p-5 h-[420px] sm:h-[480px] shadow-none border border-border hover:border-primary/40 transition-colors flex flex-col cursor-pointer">
+                  <header className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Image
+                        src={rev.avatar}
+                        alt={rev.handle}
+                        width={40}
+                        height={40}
+                        className="rounded-full bg-muted flex-shrink-0 object-cover size-10"
+                      />
+                      <cite className="font-semibold text-sm text-foreground truncate not-italic">
+                        {rev.handle}
+                      </cite>
                     </div>
-                  </div>
-                  <div className="flex gap-0.5 text-amber-500">
-                    {[...Array(5)].map((_, s) => (
-                      <Star key={s} className="h-3 w-3 fill-amber-500" />
-                    ))}
-                  </div>
-                </div>
+                  </header>
 
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                  "{rev.text}"
-                </p>
-              </div>
+                  <blockquote className="flex-1 text-muted-foreground text-xs sm:text-sm leading-relaxed whitespace-pre-line overflow-y-auto pr-1">
+                    {rev.text}
+                  </blockquote>
 
-              <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs text-primary font-medium">
-                <span>Verified user</span>
-                <span className="flex items-center gap-1 hover:underline">
-                  View post <ExternalLink className="h-3 w-3" />
-                </span>
-              </div>
+                  <footer className="mt-auto pt-3 text-xs text-primary flex items-center gap-1 font-medium border-t border-border/40">
+                    View full content
+                    <ExternalLink className="size-3.5" />
+                  </footer>
+                </article>
+              </a>
             </div>
           ))}
         </div>

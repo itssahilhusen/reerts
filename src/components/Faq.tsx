@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ArrowRight } from "lucide-react";
+import { ReertsLogo } from "@/components/ReertsLogo";
 
 export function Faq() {
-  const [openIdx, setOpenIdx] = useState<number | null>(0);
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
 
   const faqs = [
     {
@@ -31,59 +31,56 @@ export function Faq() {
   ];
 
   return (
-    <section id="faq" className="border-t border-border px-4 py-20 bg-muted/10">
-      <div className="mx-auto max-w-4xl">
-        <div className="mx-auto max-w-2xl text-center mb-12">
-          <div className="flex items-center gap-2 mb-3 justify-center">
-            <Image
-              src="/images/logos/logo-light-svg.svg"
-              alt="reerts"
-              width={32}
-              height={32}
-              className="rounded-md dark:hidden"
-            />
-            <Image
-              src="/images/logos/logo-dark-svg.svg"
-              alt="reerts"
-              width={32}
-              height={32}
-              className="rounded-md hidden dark:block"
-            />
+    <section id="faq" className="border-t border-border bg-muted/30 px-4 py-20">
+      <div className="container mx-auto max-w-3xl">
+        <div className="mb-12 text-center">
+          <div className="flex flex-col items-center gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <ReertsLogo iconClassName="size-8 sm:size-9 object-contain" />
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              FAQ
+            </h2>
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Frequently Asked Questions
-          </h2>
-          <p className="mt-3 text-base text-muted-foreground">
-            Everything you need to know about reerts's platform, security, and scheduling.
+          <p className="whitespace-pre-line text-lg text-muted-foreground">
+            Still have questions? Feel free to reach out!
           </p>
+          <a
+            href="/support"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2 mt-6 shadow-xs"
+          >
+            <span>Contact Us</span>
+            <ArrowRight className="size-4" />
+          </a>
         </div>
 
-        <div className="space-y-3">
+        <div className="w-full">
           {faqs.map((faq, idx) => {
             const isOpen = openIdx === idx;
             return (
-              <div
-                key={idx}
-                className="rounded-xl border border-border bg-card px-5 transition-all shadow-2xs"
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  className="flex w-full items-center justify-between py-4 text-left text-base font-semibold text-foreground focus:outline-none"
-                  aria-expanded={isOpen}
-                >
-                  <span>{faq.q}</span>
-                  <ChevronDown
-                    className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                      isOpen ? "rotate-180 text-foreground" : ""
-                    }`}
-                  />
-                </button>
-                {isOpen && (
-                  <div className="pb-5 pt-1 text-sm text-muted-foreground leading-relaxed animate-in fade-in-50 duration-150">
-                    {faq.a}
-                  </div>
-                )}
+              <div key={idx} className="mb-4 last:mb-0">
+                <div className="rounded-lg border border-border bg-card px-4 transition-colors">
+                  <h3>
+                    <button
+                      type="button"
+                      onClick={() => setOpenIdx(isOpen ? null : idx)}
+                      className="flex w-full items-start justify-between gap-4 py-4 text-left text-base font-medium text-foreground outline-none transition-all"
+                      aria-expanded={isOpen}
+                    >
+                      <span>{faq.q}</span>
+                      <ChevronDown
+                        className={`text-muted-foreground size-4 shrink-0 translate-y-1 transition-transform duration-200 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                  </h3>
+                  {isOpen && (
+                    <div className="pt-0 pb-4 text-sm text-muted-foreground leading-relaxed animate-in fade-in-50 duration-150">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}

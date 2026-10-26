@@ -17,19 +17,19 @@ import { Footer } from "@/components/Footer";
 import { TrialModal } from "@/components/TrialModal";
 
 export default function Home() {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   const [trialOpen, setTrialOpen] = useState(false);
   const [trialPlan, setTrialPlan] = useState("Pro");
 
   useEffect(() => {
-    // Check saved theme or system preference
+    // Check saved theme: default to dark unless explicitly set to light
     const saved = localStorage.getItem("reerts-theme");
-    if (saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-      setIsDark(true);
-      document.documentElement.classList.add("dark");
-    } else {
+    if (saved === "light") {
       setIsDark(false);
       document.documentElement.classList.remove("dark");
+    } else {
+      setIsDark(true);
+      document.documentElement.classList.add("dark");
     }
   }, []);
 
@@ -72,10 +72,10 @@ export default function Home() {
         <AutomationFlow />
         <MultiPlatformReach />
         <Comparison />
-        <WorkflowDemo />
-        <ShowcaseDemos />
+        <WorkflowDemo isDark={isDark} />
         <Reviews />
         <MidCta onOpenTrial={() => handleOpenTrial("Pro")} />
+        <ShowcaseDemos />
         <Pricing onOpenTrial={handleOpenTrial} />
         <Faq />
         <ClosingCta onOpenTrial={() => handleOpenTrial("Pro")} />

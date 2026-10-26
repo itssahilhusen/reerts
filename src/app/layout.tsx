@@ -11,8 +11,14 @@ export const metadata: Metadata = {
   title: "reerts — AI Marketing Automation for Founders & Agencies",
   description: "Automate social media marketing in minutes. Brand voice AI, AI-found content ideas, link-to-post drafts, and AI carousels — built for founders and agencies.",
   icons: {
-    icon: "/images/logos/reerts-icon.svg",
-    apple: "/images/logos/reerts-logo.png",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/images/logos/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "512x512", type: "image/png" },
+    ],
   },
   openGraph: {
     title: "reerts — AI Marketing Automation for Founders & Agencies",
@@ -34,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="scroll-smooth font-sans" suppressHydrationWarning>
+    <html lang="en" className="dark scroll-smooth font-sans" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

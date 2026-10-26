@@ -1,54 +1,148 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-interface ReertsLogoProps {
+export interface ReertsLogoProps {
   className?: string;
   iconClassName?: string;
-  textClassName?: string;
-  showText?: boolean;
-  uppercase?: boolean;
-  brandName?: string;
+  forceDarkBackground?: boolean;
+  forceLightBackground?: boolean;
+  showWordmark?: boolean;
+  variant?: "symbol" | "full";
+  priority?: boolean;
+  size?: number;
 }
 
 export function ReertsLogo({
   className,
-  iconClassName = "size-5",
-  textClassName = "font-bold text-base tracking-tight font-sans",
-  showText = true,
-  uppercase = false,
-  brandName,
+  iconClassName,
+  forceDarkBackground = false,
+  forceLightBackground = false,
+  showWordmark = false,
+  variant = "symbol",
+  priority = false,
+  size,
 }: ReertsLogoProps) {
-  const blade = "M 50 41.5 C 52 34 58 23 72 17.5 C 82 13.5 88.5 19 87 28 C 85.5 37 77 47 64 51.5 C 56 54 50.5 47 50 41.5 Z";
+  const isFull = variant === "full" || showWordmark;
+
+  // 1. Full Brand Logo (Symbol + Wordmark)
+  if (isFull) {
+    if (forceDarkBackground) {
+      return (
+        <div className={cn("inline-flex items-center shrink-0 select-none", className)}>
+          <Image
+            src="/images/logos/header.black.logo.svg"
+            alt="reerts"
+            width={size ? Math.round(size * 3.7) : 136}
+            height={size || 40}
+            style={size ? { height: size, width: "auto" } : undefined}
+            className={cn(size ? "object-contain" : "h-8 sm:h-9 w-auto object-contain", iconClassName)}
+            priority={priority}
+          />
+        </div>
+      );
+    }
+
+    if (forceLightBackground) {
+      return (
+        <div className={cn("inline-flex items-center shrink-0 select-none", className)}>
+          <Image
+            src="/images/logos/header.white.logo.svg"
+            alt="reerts"
+            width={size ? Math.round(size * 3.7) : 136}
+            height={size || 40}
+            style={size ? { height: size, width: "auto" } : undefined}
+            className={cn(size ? "object-contain" : "h-8 sm:h-9 w-auto object-contain", iconClassName)}
+            priority={priority}
+          />
+        </div>
+      );
+    }
+
+    // Adaptive Theme
+    return (
+      <div className={cn("inline-flex items-center shrink-0 select-none", className)}>
+        <Image
+          src="/images/logos/header.white.logo.svg"
+          alt="reerts"
+          width={size ? Math.round(size * 3.7) : 136}
+          height={size || 40}
+          style={size ? { height: size, width: "auto" } : undefined}
+          className={cn(size ? "dark:hidden object-contain" : "dark:hidden h-8 sm:h-9 w-auto object-contain", iconClassName)}
+          priority={priority}
+        />
+        <Image
+          src="/images/logos/header.black.logo.svg"
+          alt="reerts"
+          width={size ? Math.round(size * 3.7) : 136}
+          height={size || 40}
+          style={size ? { height: size, width: "auto" } : undefined}
+          className={cn(size ? "hidden dark:block object-contain" : "hidden dark:block h-8 sm:h-9 w-auto object-contain", iconClassName)}
+          priority={priority}
+        />
+      </div>
+    );
+  }
+
+  // 2. Symbol Only Logo (Standalone Orbital Mark)
+  const pxSize = size || 36;
+  const sizeStyle = size ? { width: size, height: size } : undefined;
+  const defaultClass = size ? "object-contain" : "size-8 sm:size-9 object-contain";
+
+  if (forceDarkBackground) {
+    return (
+      <div className={cn("inline-flex items-center justify-center shrink-0 select-none", className)}>
+        <Image
+          src="/images/logos/reerts-symbol-white.svg"
+          alt="reerts"
+          width={pxSize}
+          height={pxSize}
+          style={sizeStyle}
+          className={cn(defaultClass, iconClassName)}
+          priority={priority}
+        />
+      </div>
+    );
+  }
+
+  if (forceLightBackground) {
+    return (
+      <div className={cn("inline-flex items-center justify-center shrink-0 select-none", className)}>
+        <Image
+          src="/images/logos/reerts-symbol-black.svg"
+          alt="reerts"
+          width={pxSize}
+          height={pxSize}
+          style={sizeStyle}
+          className={cn(defaultClass, iconClassName)}
+          priority={priority}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className={cn("flex items-center gap-2 select-none text-foreground", className)}>
-      {/* 8-Blade Kinetic Vortex Symbol */}
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 100 100"
-        fill="currentColor"
-        className={cn("size-5 shrink-0 text-foreground transition-transform duration-500 hover:rotate-90", iconClassName)}
-        aria-hidden="true"
-      >
-        <g fill="currentColor">
-          <path d={blade} />
-          <path d={blade} transform="rotate(45 50 50)" />
-          <path d={blade} transform="rotate(90 50 50)" />
-          <path d={blade} transform="rotate(135 50 50)" />
-          <path d={blade} transform="rotate(180 50 50)" />
-          <path d={blade} transform="rotate(225 50 50)" />
-          <path d={blade} transform="rotate(270 50 50)" />
-          <path d={blade} transform="rotate(315 50 50)" />
-        </g>
-      </svg>
-      {showText && (
-        <span className={cn("text-foreground font-bold tracking-tight", textClassName)}>
-          {brandName ? brandName : uppercase ? "REERTS" : "reerts"}
-        </span>
-      )}
+    <div className={cn("inline-flex items-center justify-center shrink-0 select-none", className)}>
+      <Image
+        src="/images/logos/reerts-symbol-black.svg"
+        alt="reerts"
+        width={pxSize}
+        height={pxSize}
+        style={sizeStyle}
+        className={cn("dark:hidden", defaultClass, iconClassName)}
+        priority={priority}
+      />
+      <Image
+        src="/images/logos/reerts-symbol-white.svg"
+        alt="reerts"
+        width={pxSize}
+        height={pxSize}
+        style={sizeStyle}
+        className={cn("hidden dark:block", defaultClass, iconClassName)}
+        priority={priority}
+      />
     </div>
   );
 }

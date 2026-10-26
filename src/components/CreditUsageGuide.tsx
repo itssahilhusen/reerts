@@ -26,8 +26,24 @@ import {
   MousePointerClick 
 } from "lucide-react";
 
-export function CreditUsageGuide() {
-  const [isOpen, setIsOpen] = useState(false);
+interface CreditUsageGuideProps {
+  isOpen?: boolean;
+  onToggle?: () => void;
+  hideTrigger?: boolean;
+}
+
+export function CreditUsageGuide({
+  isOpen: controlledIsOpen,
+  onToggle: controlledOnToggle,
+  hideTrigger = false,
+}: CreditUsageGuideProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+
+  const isControlled = controlledIsOpen !== undefined;
+  const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
+  const toggle = isControlled
+    ? controlledOnToggle
+    : () => setInternalIsOpen(!internalIsOpen);
 
   const rows = [
     {
@@ -184,21 +200,23 @@ export function CreditUsageGuide() {
   ];
 
   return (
-    <div className="mt-12 flex flex-col items-center">
-      {/* Accordion Trigger Button */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-6 py-2.5 text-sm font-semibold text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground transition-all dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
-        aria-expanded={isOpen}
-      >
-        <span>Credit Usage Guide</span>
-        <ChevronDown
-          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-            isOpen ? "rotate-180 text-foreground" : ""
-          }`}
-        />
-      </button>
+    <div className="w-full flex flex-col items-center">
+      {/* Accordion Trigger Button (hidden if controlled externally) */}
+      {!hideTrigger && (
+        <button
+          type="button"
+          onClick={toggle}
+          className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-6 py-2.5 text-sm font-semibold text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground transition-all dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+          aria-expanded={isOpen}
+        >
+          <span>Credit Usage Guide</span>
+          <ChevronDown
+            className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+              isOpen ? "rotate-180 text-foreground" : ""
+            }`}
+          />
+        </button>
+      )}
 
       {/* Collapsible Table Section */}
       {isOpen && (

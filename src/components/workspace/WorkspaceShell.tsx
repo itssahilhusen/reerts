@@ -93,17 +93,17 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerPost, setComposerPost] = useState<any>(null);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
-  // Sync theme - default to light unless explicitly saved as dark
+  // Sync theme - default to dark unless explicitly saved as light
   useEffect(() => {
     const saved = localStorage.getItem("reerts-theme");
-    if (saved === "dark") {
-      setIsDark(true);
-      document.documentElement.classList.add("dark");
-    } else {
+    if (saved === "light") {
       setIsDark(false);
       document.documentElement.classList.remove("dark");
+    } else {
+      setIsDark(true);
+      document.documentElement.classList.add("dark");
     }
   }, []);
 
@@ -198,15 +198,24 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
         )}
       >
         {/* Brand Logo Header: REERTS */}
-        <div className="flex h-12 shrink-0 items-center justify-between px-4 border-b border-border/40">
-          <Link href="/" className="flex items-center gap-2 overflow-hidden">
-            <ReertsLogo
-              iconClassName="size-5 shrink-0"
-              textClassName="font-extrabold text-sm tracking-wider uppercase font-sans text-foreground"
-              showText={!isSidebarCollapsed}
-              uppercase={true}
-              brandName="REERTS"
-            />
+        <div
+          className={cn(
+            "flex h-12 shrink-0 items-center border-b border-border/40 transition-all",
+            isSidebarCollapsed ? "justify-center px-0" : "justify-start px-4"
+          )}
+        >
+          <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
+            {isSidebarCollapsed ? (
+              <ReertsLogo
+                variant="symbol"
+                iconClassName="size-7 object-contain"
+              />
+            ) : (
+              <ReertsLogo
+                variant="full"
+                iconClassName="h-7 w-auto object-contain"
+              />
+            )}
           </Link>
         </div>
 
