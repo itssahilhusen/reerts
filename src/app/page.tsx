@@ -75,7 +75,7 @@ export default function Home() {
         <WorkflowDemo isDark={isDark} />
         <Reviews />
         <MidCta onOpenTrial={() => handleOpenTrial("Pro")} />
-        <ShowcaseDemos />
+        <ShowcaseDemos isDark={isDark} />
         <Pricing onOpenTrial={handleOpenTrial} />
         <Faq />
         <ClosingCta onOpenTrial={() => handleOpenTrial("Pro")} />

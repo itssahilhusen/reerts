@@ -7,12 +7,13 @@ import { ChevronDown, Languages, Sun, Moon, Menu, X, ArrowRight, Sparkles, BookO
 import { ReertsLogo } from "@/components/ReertsLogo";
 
 interface HeaderProps {
-  onOpenTrial: () => void;
+  onOpenTrial?: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
+  onLogout?: () => void;
 }
 
-export function Header({ onOpenTrial, isDark, onToggleTheme }: HeaderProps) {
+export function Header({ onOpenTrial, isDark, onToggleTheme, onLogout }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -174,7 +175,7 @@ export function Header({ onOpenTrial, isDark, onToggleTheme }: HeaderProps) {
 
         {/* Right Action Icons & Buttons */}
         <div className="hidden items-center gap-3 lg:flex">
-          <div className="flex items-center gap-1 border-r border-border pr-3">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -194,21 +195,21 @@ export function Header({ onOpenTrial, isDark, onToggleTheme }: HeaderProps) {
             </button>
           </div>
 
+          <button
+            type="button"
+            onClick={onLogout}
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
+          >
+            Log out
+          </button>
+
           <Link
             href="/studio"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-all shadow-xs"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            Studio App
+            Open Reerts
+            <ArrowRight className="h-4 w-4" />
           </Link>
-
-          <button
-            onClick={onOpenTrial}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
-          >
-            Start free trial
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
         </div>
 
         {/* Mobile menu toggle */}
@@ -278,15 +279,23 @@ export function Header({ onOpenTrial, isDark, onToggleTheme }: HeaderProps) {
             </Link>
 
             <div className="pt-4 border-t border-border flex flex-col gap-3">
+              <Link
+                href="/studio"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                Open Reerts
+                <ArrowRight className="h-4 w-4" />
+              </Link>
               <button
+                type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  onOpenTrial();
+                  onLogout?.();
                 }}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-card py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
               >
-                Start your 7-day free trial
-                <ArrowRight className="h-4 w-4" />
+                Log out
               </button>
             </div>
           </div>
