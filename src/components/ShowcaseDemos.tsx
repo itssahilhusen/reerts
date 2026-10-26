@@ -59,7 +59,8 @@ export function ShowcaseDemos() {
 
       <div className="mt-16 flex flex-col gap-20 lg:gap-28 max-w-7xl mx-auto px-4 sm:px-6">
         
-        {/* ROW 1: AI Carousel Maker */}
+        {/* ROW 1: AI Carousel Maker (Temporarily disabled until feature ships. Change false to true or remove wrapper to re-enable) */}
+        {false && (
         <div className="grid w-full items-center gap-10 lg:grid-cols-2 lg:gap-14">
           <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
             <span className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
@@ -178,6 +179,7 @@ export function ShowcaseDemos() {
             </div>
           </div>
         </div>
+        )}
 
         {/* ROW 2: Comment Auto-DM (iPhone Mockup) */}
         <div className="grid w-full items-center gap-10 lg:grid-cols-2 lg:gap-14">

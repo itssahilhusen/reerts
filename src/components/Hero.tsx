@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Rss } from "lucide-react";
+import { AnimatedHeadline } from "./AnimatedHeadline";
 
 interface HeroProps {
   onOpenTrial: () => void;
@@ -23,10 +24,11 @@ export function Hero({ onOpenTrial }: HeroProps) {
   ];
 
   return (
-    <section id="hero" className="flex flex-col items-center px-4 pt-16 pb-12 md:pt-20 md:pb-16 lg:min-h-[calc(100vh-4rem)]">
+    <section id="hero" className="flex flex-col items-center px-4 pt-12 pb-4 md:pt-16 md:pb-6">
       <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4">
         <div className="flex w-full flex-col items-center text-center">
-          {/* Release Badge */}
+          {/* Release Badge (Temporarily commented out until AI Carousel Maker ships) */}
+          {/*
           <Link
             href="#showcase-demos"
             className="group mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card py-1 pr-3 pl-1 text-sm font-medium text-foreground shadow-xs transition-colors hover:border-primary/40 hover:bg-primary/5"
@@ -47,13 +49,10 @@ export function Hero({ onOpenTrial }: HeroProps) {
             <span>AI Carousel Maker is live</span>
             <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
           </Link>
+          */}
 
-          {/* Main Headline */}
-          <h1 className="text-primary text-3xl leading-tight font-bold tracking-tight text-balance sm:text-5xl md:text-6xl">
-            <span className="sr-only">Social media marketing automation tool for founders and agencies.</span>
-            <span className="block">Automate social media</span>
-            <span className="block">in 10 minutes a day.</span>
-          </h1>
+          {/* Main Headline with Editorial Serif Italic Styling & Smooth Entrance Animations */}
+          <AnimatedHeadline className="mb-2" />
 
           {/* Subtitle */}
           <p className="mt-4 max-w-2xl text-base whitespace-pre-line text-muted-foreground sm:text-lg md:mt-6 md:text-xl">

@@ -787,8 +787,8 @@ const eb = [[308, 346], [365, 346], [365, 200], [382, 200], ...ee];
 
 export function AutomationFlow() {
   return (
-    <section id="automation-flow" className="w-full mt-12 md:mt-16 py-6 overflow-hidden">
-      <div className="mx-auto max-w-3xl text-center mb-10 px-4">
+    <section id="automation-flow" className="w-full mt-2 md:mt-4 pt-2 md:pt-4 pb-8 overflow-hidden">
+      <div className="mx-auto max-w-3xl text-center mb-8 px-4">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary mb-3">
           <Sparkles className="size-3.5" />
           Autonomous Pipeline

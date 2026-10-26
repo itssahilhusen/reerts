@@ -51,6 +51,8 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-geist-sans)", "Geist", "sans-serif"],
         mono: ["var(--font-geist-mono)", "Geist Mono", "monospace"],
+        serif: ["var(--font-instrument-serif)", "'Instrument Serif'", "'Playfair Display'", "Didot", "Georgia", "serif"],
+        editorial: ["var(--font-instrument-serif)", "'Instrument Serif'", "'Playfair Display'", "Didot", "Georgia", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -74,12 +76,17 @@ const config: Config = {
           "0%": { transform: "translateX(0%)" },
           "100%": { transform: "translateX(-50%)" },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "200% center" },
+          "100%": { backgroundPosition: "-200% center" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "spin-reverse": "spin-reverse 40s linear infinite",
         marquee: "marquee 35s linear infinite",
+        shimmer: "shimmer 8s ease-in-out infinite",
       },
     },
   },
