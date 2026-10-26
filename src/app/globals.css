@@ -1,0 +1,232 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root, .theme-light {
+  --font-geist-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-geist-mono: 'Geist Mono', monospace;
+  --radius: 0.625rem;
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #171717;
+  --primary-foreground: #fafafa;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #171717;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --accent: #f5f5f5;
+  --accent-foreground: #171717;
+  --destructive: #e40014;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #a1a1a1;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #0a0a0a;
+
+  --background-rgb: 255 255 255;
+  --foreground-rgb: 10 10 10;
+  --card-rgb: 255 255 255;
+  --card-foreground-rgb: 10 10 10;
+  --primary-rgb: 23 23 23;
+  --primary-foreground-rgb: 250 250 250;
+  --secondary-rgb: 245 245 245;
+  --secondary-foreground-rgb: 23 23 23;
+  --muted-rgb: 245 245 245;
+  --muted-foreground-rgb: 115 115 115;
+  --accent-rgb: 245 245 245;
+  --accent-foreground-rgb: 23 23 23;
+  --destructive-rgb: 228 0 20;
+  --border-rgb: 229 229 229;
+  --ring-rgb: 161 161 161;
+  --sidebar-rgb: 250 250 250;
+  --sidebar-foreground-rgb: 10 10 10;
+
+  --tone-yellow: #fbf3e1;
+  --tone-yellow-strong: #f6dba1;
+  --tone-green: #e8f9eb;
+  --tone-green-strong: #b7e5bf;
+  --tone-blue: #e9f2ff;
+  --tone-blue-strong: #c0d9ff;
+  --tone-purple: #f1edff;
+  --tone-pink: #ffecf3;
+}
+
+.dark {
+  --background: #181818;
+  --foreground: #fafafa;
+  --card: #252525;
+  --card-foreground: #fafafa;
+  --popover: #252525;
+  --popover-foreground: #fafafa;
+  --primary: #e5e5e5;
+  --primary-foreground: #171717;
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a1a1a1;
+  --accent: #262626;
+  --accent-foreground: #fafafa;
+  --destructive: #ff6568;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #737373;
+  --sidebar: #252525;
+  --sidebar-foreground: #fafafa;
+
+  --background-rgb: 24 24 24;
+  --foreground-rgb: 250 250 250;
+  --card-rgb: 37 37 37;
+  --card-foreground-rgb: 250 250 250;
+  --primary-rgb: 229 229 229;
+  --primary-foreground-rgb: 23 23 23;
+  --secondary-rgb: 38 38 38;
+  --secondary-foreground-rgb: 250 250 250;
+  --muted-rgb: 38 38 38;
+  --muted-foreground-rgb: 161 161 161;
+  --accent-rgb: 38 38 38;
+  --accent-foreground-rgb: 250 250 250;
+  --destructive-rgb: 255 101 104;
+  --border-rgb: 255 255 255 / 0.1;
+  --ring-rgb: 115 115 115;
+  --sidebar-rgb: 37 37 37;
+  --sidebar-foreground-rgb: 250 250 250;
+
+  --tone-yellow: #443922;
+  --tone-yellow-strong: #695526;
+  --tone-green: #2b412f;
+  --tone-green-strong: #346440;
+  --tone-blue: #2e3b50;
+  --tone-blue-strong: #3d5885;
+  --tone-purple: #3c364d;
+  --tone-pink: #4b323c;
+}
+
+* {
+  border-color: rgb(var(--border-rgb));
+}
+
+html {
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 140, 140, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 140, 140, 0.7);
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.5) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+.dark .scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* Dedicated visible sidebar menu scrollbar */
+.sidebar-scrollbar {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.5) rgba(0, 0, 0, 0.04);
+}
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  display: block;
+}
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 9999px;
+}
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.45);
+  border-radius: 9999px;
+  transition: background-color 0.15s ease;
+}
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(80, 80, 80, 0.75);
+}
+.dark .sidebar-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.35) rgba(255, 255, 255, 0.04);
+}
+.dark .sidebar-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+.dark .sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+}
+.dark .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+/* Hide scrollbar utility (used only where explicitly intended, e.g. horizontal tab overflow on mobile) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes spin-counter {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+html, body {
+  font-family: var(--font-geist-sans);
+}
+

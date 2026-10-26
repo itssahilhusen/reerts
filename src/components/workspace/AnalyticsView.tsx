@@ -1,0 +1,79 @@
+"use client";
+
+import React from "react";
+import Image from "next/image";
+import { TrendingUp, Users, Eye, BarChart2, ArrowUpRight, Award } from "lucide-react";
+
+export function AnalyticsView() {
+  const stats = [
+    { label: "Total Reach", value: "148.5K", change: "+34.2%", icon: Eye, color: "text-blue-500" },
+    { label: "Engagement Rate", value: "5.8%", change: "+1.4%", icon: TrendingUp, color: "text-emerald-500" },
+    { label: "Followers Gained", value: "+2,480", change: "+18.9%", icon: Users, color: "text-purple-500" },
+    { label: "AI Content Saved", value: "38.5 hrs", change: "This month", icon: Award, color: "text-amber-500" },
+  ];
+
+  const platformPerformance = [
+    { platform: "X (Twitter)", reach: "68.4K", engagement: "4.9%", posts: 32, icon: "/images/platforms/x-light.svg", invert: true },
+    { platform: "LinkedIn", reach: "52.1K", engagement: "6.8%", posts: 18, icon: "/images/platforms/linkedin.svg" },
+    { platform: "Threads", reach: "19.2K", engagement: "5.2%", posts: 24, icon: "/images/platforms/threads.svg", invert: true },
+    { platform: "Instagram", reach: "8.8K", engagement: "7.1%", posts: 12, icon: "/images/platforms/instagram.svg" },
+  ];
+
+  return (
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background p-6 space-y-6">
+      <div>
+        <h1 className="text-xl font-bold tracking-tight text-foreground">Cross-Platform Analytics</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Unified performance insights across all your connected social channels.
+        </p>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((s) => (
+          <div key={s.label} className="rounded-2xl border border-border bg-card p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">{s.label}</span>
+              <s.icon className={`size-4 ${s.color}`} />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground">{s.value}</div>
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">{s.change} vs last month</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Breakdown by Platform */}
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
+        <h2 className="text-sm font-bold text-foreground">Platform Performance Breakdown</h2>
+        <div className="divide-y divide-border/60">
+          {platformPerformance.map((p) => (
+            <div key={p.platform} className="py-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-8 rounded-lg bg-muted flex items-center justify-center p-1.5 border border-border">
+                  <Image src={p.icon} alt={p.platform} width={18} height={18} className={p.invert ? "dark:invert" : ""} />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-foreground block">{p.platform}</span>
+                  <span className="text-[11px] text-muted-foreground">{p.posts} posts published</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-8 text-right">
+                <div>
+                  <span className="text-xs font-bold text-foreground block">{p.reach}</span>
+                  <span className="text-[10px] text-muted-foreground">Impressions</span>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block">{p.engagement}</span>
+                  <span className="text-[10px] text-muted-foreground">Eng. Rate</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
