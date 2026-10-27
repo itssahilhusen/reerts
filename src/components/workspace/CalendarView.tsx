@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Plus, Clock, Calendar as CalendarIcon } from "lucide-react";
 
@@ -10,11 +10,37 @@ interface CalendarViewProps {
 
 export function CalendarView({ onOpenComposer }: CalendarViewProps) {
   const [selectedWeek, setSelectedWeek] = useState("Oct 26 - Nov 01, 2026");
+  const [livePosts, setLivePosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/posts")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.posts) setLivePosts(data.posts);
+      })
+      .catch((err) => console.error(err));
+  }, []);
 
   const days = [
-    { day: "Mon", date: "26", posts: [{ title: "Why solopreneurs replace tools", time: "09:30 AM", platforms: ["x", "linkedin"] }] },
+    { 
+      day: "Mon", 
+      date: "26", 
+      posts: livePosts.filter((p) => p.status === "PUBLISHED").map((p) => ({
+        title: p.title,
+        time: "09:30 AM",
+        platforms: p.platforms || ["x", "linkedin"],
+      }))
+    },
     { day: "Tue", date: "27", posts: [] },
-    { day: "Wed", date: "28", posts: [{ title: "Stop scheduling posts manually", time: "02:00 PM", platforms: ["x", "threads"] }] },
+    { 
+      day: "Wed", 
+      date: "28", 
+      posts: livePosts.filter((p) => p.status === "SCHEDULED").map((p) => ({
+        title: p.title,
+        time: "02:00 PM",
+        platforms: p.platforms || ["x", "threads"],
+      }))
+    },
     { day: "Thu", date: "29", posts: [{ title: "5 AI tools for creators", time: "11:00 AM", platforms: ["linkedin", "threads"] }] },
     { day: "Fri", date: "30", posts: [{ title: "Building in public weekly recap", time: "04:30 PM", platforms: ["x", "linkedin", "threads"] }] },
     { day: "Sat", date: "31", posts: [] },
@@ -70,7 +96,7 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
                       <Clock className="size-2.5" /> {p.time}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      {p.platforms.map((plat) => (
+                      {p.platforms.map((plat: string) => (
                         <Image key={plat} src={`/images/platforms/${plat === "x" ? "x-light.svg" : plat + ".svg"}`} alt={plat} width={10} height={10} className={plat === "x" ? "dark:invert" : ""} />
                       ))}
                     </div>

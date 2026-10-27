@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sparkles, Save, Sliders, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,9 +11,47 @@ export function BrandVoiceView() {
   const [directness, setDirectness] = useState(85);
   const [targetAudience, setTargetAudience] = useState("Founders, content creators, engineers, and digital entrepreneurs looking to scale with automation.");
   const [bannedWords, setBannedWords] = useState("delve, tapestry, synergy, revolutionize, unleash, testament");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    toast.success("Brand Voice Persona updated successfully!");
+  useEffect(() => {
+    fetch("/api/brand-voice")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.brandVoice) {
+          setPersonaName(data.brandVoice.name || "");
+          setFormality(data.brandVoice.formality ?? 30);
+          setHumor(data.brandVoice.humor ?? 45);
+          setDirectness(data.brandVoice.directness ?? 85);
+          setTargetAudience(data.brandVoice.targetAudience || "");
+          setBannedWords(data.brandVoice.bannedWords || "");
+        }
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/brand-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: personaName,
+          formality,
+          humor,
+          directness,
+          targetAudience,
+          bannedWords,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Brand Voice Persona updated and synced with AI pipeline!");
+      }
+    } catch (err) {
+      toast.error("Failed to save persona");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -28,11 +66,12 @@ export function BrandVoiceView() {
 
         <button
           type="button"
+          disabled={isSaving}
           onClick={handleSave}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs disabled:opacity-50"
         >
           <Save className="size-3.5" />
-          <span>Save Persona</span>
+          <span>{isSaving ? "Saving..." : "Save Persona"}</span>
         </button>
       </div>
 

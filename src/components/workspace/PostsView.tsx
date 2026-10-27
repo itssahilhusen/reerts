@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Plus, Search, Filter, MoreHorizontal, CheckCircle2, Clock, FileText, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,51 +11,45 @@ interface PostsViewProps {
 
 export function PostsView({ onOpenComposer }: PostsViewProps) {
   const [filterTab, setFilterTab] = useState<"all" | "published" | "scheduled" | "drafts">("all");
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const posts = [
-    {
-      id: "1",
-      title: "reerts 2.0 is officially live! 🚀",
-      snippet: "Autonomous multi-platform publishing with your unique brand voice.",
-      status: "published",
-      date: "Oct 24, 2026",
-      platforms: ["x", "linkedin", "threads", "instagram"],
-      views: "14.2K",
-      engagement: "4.8%",
-    },
-    {
-      id: "2",
-      title: "Why carousel posts get 3x higher dwell time on LinkedIn",
-      snippet: "Data breakdown from over 10,000 posts analyzed with our analytics engine.",
-      status: "published",
-      date: "Oct 22, 2026",
-      platforms: ["linkedin"],
-      views: "28.5K",
-      engagement: "6.2%",
-    },
-    {
-      id: "3",
-      title: "5 AI tools that will save you 20 hours this week",
-      snippet: "From autonomous content engines to automatic lead DM responses.",
-      status: "scheduled",
-      date: "Oct 27, 09:30 AM",
-      platforms: ["x", "threads", "linkedin"],
-      views: "-",
-      engagement: "-",
-    },
-    {
-      id: "4",
-      title: "Behind the scenes of building reerts in public",
-      snippet: "Here is the exact tech stack we used to achieve 100% UI fidelity in record time.",
-      status: "drafts",
-      date: "Edited 2h ago",
-      platforms: ["x", "linkedin"],
-      views: "-",
-      engagement: "-",
-    },
-  ];
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/posts");
+      const data = await res.json();
+      if (data.posts) {
+        setPosts(data.posts);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filtered = posts.filter((p) => filterTab === "all" || p.status === filterTab);
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/posts/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setPosts(posts.filter((p) => p.id !== id));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const filtered = posts.filter((p) => {
+    const s = (p.status || "").toLowerCase();
+    if (filterTab === "all") return true;
+    if (filterTab === "drafts") return s === "draft" || s === "drafts";
+    return s === filterTab;
+  });
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background p-6 space-y-6">
@@ -116,7 +110,7 @@ export function PostsView({ onOpenComposer }: PostsViewProps) {
                 </td>
                 <td className="p-3.5">
                   <div className="flex items-center gap-1">
-                    {post.platforms.map((p) => (
+                    {(post.platforms || ["x", "linkedin"]).map((p: string) => (
                       <Image key={p} src={`/images/platforms/${p === "x" ? "x-light.svg" : p + ".svg"}`} alt={p} width={14} height={14} className={p === "x" ? "dark:invert" : ""} />
                     ))}
                   </div>
@@ -124,25 +118,39 @@ export function PostsView({ onOpenComposer }: PostsViewProps) {
                 <td className="p-3.5">
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                      post.status === "published" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-                      post.status === "scheduled" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                      post.status === "drafts" && "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
+                      post.status === "PUBLISHED" && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                      post.status === "SCHEDULED" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                      post.status === "DRAFT" && "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                     )}
                   >
                     {post.status}
                   </span>
                 </td>
-                <td className="p-3.5 text-muted-foreground">{post.date}</td>
-                <td className="p-3.5 font-semibold text-foreground">{post.views}</td>
+                <td className="p-3.5 text-muted-foreground">
+                  {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : (post.scheduledAt ? new Date(post.scheduledAt).toLocaleDateString() : "Drafted")}
+                </td>
+                <td className="p-3.5 font-semibold text-foreground">
+                  {post.impressions ? `${(post.impressions / 1000).toFixed(1)}K` : "-"}
+                </td>
                 <td className="p-3.5 text-right">
-                  <button
-                    type="button"
-                    onClick={() => onOpenComposer({ title: post.title, content: post.snippet, platforms: post.platforms })}
-                    className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-                  >
-                    Edit
-                  </button>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpenComposer({ id: post.id, title: post.title, content: post.content, platforms: post.platforms })}
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(post.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors text-[11px]"
+                      title="Delete post"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

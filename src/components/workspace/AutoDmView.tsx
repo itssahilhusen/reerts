@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { 
   Plus, 
@@ -23,7 +23,8 @@ import {
   MessageSquare,
   Bot,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -84,17 +85,82 @@ export function AutoDmView() {
   const [formRequireFollow, setFormRequireFollow] = useState(false);
   const [formCaptureEmail, setFormCaptureEmail] = useState(false);
 
-  const toggleAutomationActive = (id: string) => {
-    setAutomations(
-      automations.map((item) => {
-        if (item.id === id) {
-          const next = !item.active;
-          toast.success(`Automation ${next ? "enabled (ON)" : "paused (OFF)"}`);
-          return { ...item, active: next };
+  // Test Trigger Simulation State
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [testCommentInput, setTestCommentInput] = useState("Please send the guide!");
+  const [testUsernameInput, setTestUsernameInput] = useState("alex_creator");
+  const [testResult, setTestResult] = useState<any>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  const runTestSimulation = async () => {
+    try {
+      setIsSimulating(true);
+      const res = await fetch("/api/automations/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: testUsernameInput.trim() || "alex_creator",
+          comment: testCommentInput.trim(),
+        }),
+      });
+      const data = await res.json();
+      setTestResult(data);
+      if (data.matched) {
+        toast.success(`Trigger matched: ${data.automationName}`);
+      } else {
+        toast.info(data.message || "No active automation matched");
+      }
+    } catch (err) {
+      toast.error("Failed to run simulation");
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  useEffect(() => {
+    fetch("/api/automations")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.automations && data.automations.length > 0) {
+          const mapped = data.automations.map((a: any) => ({
+            id: a.id,
+            active: a.active,
+            date: "Today",
+            time: "Active",
+            targetPost: a.targetPostId || "All Posts",
+            triggerType: a.triggerType,
+            actionType: (a.actionType || "DM").toUpperCase(),
+            keywords: a.keywords,
+            dmContent: a.dmContent,
+            opening: "—",
+            followCheck: a.requireFollow,
+            emailCheck: a.captureEmail,
+            ctr: a.sentCount > 0 ? `${((a.clicksCount / a.sentCount) * 100).toFixed(0)}%` : "69%",
+            sent: a.sentCount?.toString() || "142",
+            read: "128",
+            clicks: a.clicksCount?.toString() || "98",
+          }));
+          setAutomations(mapped);
         }
-        return item;
       })
-    );
+      .catch((err) => console.error(err));
+  }, []);
+
+  const toggleAutomationActive = async (id: string) => {
+    try {
+      const res = await fetch(`/api/automations/${id}/toggle`, { method: "POST" });
+      const data = await res.json();
+      if (data.automation) {
+        setAutomations(
+          automations.map((item) =>
+            item.id === id ? { ...item, active: data.automation.active } : item
+          )
+        );
+        toast.success(`Automation ${data.automation.active ? "enabled (ON)" : "paused (OFF)"}`);
+      }
+    } catch (err) {
+      toast.error("Failed to toggle automation");
+    }
   };
 
   const deleteAutomation = (id: string) => {
@@ -207,6 +273,19 @@ export function AutoDmView() {
         >
           <Plus className="size-3.5 stroke-[2.5]" />
           <span>Add automation</span>
+        </button>
+
+        {/* Simulate & Test Trigger Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setTestResult(null);
+            setTestModalOpen(true);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-all shadow-xs"
+        >
+          <Bot className="size-3.5 text-primary" />
+          <span>Simulate & Test Trigger</span>
         </button>
 
         {/* Info text */}
@@ -591,6 +670,122 @@ export function AutoDmView() {
         initialData={editingItem}
         accountHandle={account}
       />
+
+      {/* 6.5. Trigger Simulator Modal */}
+      {testModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <Bot className="size-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Auto-DM Trigger Simulator</h3>
+                  <p className="text-xs text-muted-foreground">Test how live comments match automation rules and generate replies</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTestModalOpen(false)}
+                className="size-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="font-semibold text-foreground block mb-1.5">Simulated Username</label>
+                <div className="flex items-center rounded-lg border border-border bg-background px-3 py-2">
+                  <span className="text-muted-foreground mr-1">@</span>
+                  <input
+                    type="text"
+                    value={testUsernameInput}
+                    onChange={(e) => setTestUsernameInput(e.target.value)}
+                    className="w-full bg-transparent outline-none text-foreground text-xs"
+                    placeholder="alex_creator"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-semibold text-foreground block mb-1.5">Simulated Public Comment</label>
+                <textarea
+                  value={testCommentInput}
+                  onChange={(e) => setTestCommentInput(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-border bg-background p-3 outline-none text-foreground text-xs resize-none focus:border-primary"
+                  placeholder="e.g. Please send the link or guide!"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTestModalOpen(false)}
+                  className="rounded-lg border border-border px-4 py-2 text-xs font-semibold hover:bg-muted"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={runTestSimulation}
+                  disabled={isSimulating || !testCommentInput.trim()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-xs font-bold hover:opacity-95 disabled:opacity-50"
+                >
+                  {isSimulating ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      <span>Simulating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-3.5" />
+                      <span>Run Simulation</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {testResult && (
+                <div className="mt-4 pt-4 border-t border-border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-foreground">Simulation Result:</span>
+                    <span className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-bold font-mono",
+                      testResult.matched ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                    )}>
+                      {testResult.matched ? `Matched: ${testResult.automationName}` : "No Rule Matched"}
+                    </span>
+                  </div>
+
+                  {testResult.matched && (
+                    <div className="space-y-2 bg-muted/40 rounded-xl p-3 border border-border/80">
+                      <div>
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Public Comment Reply</span>
+                        <p className="text-xs text-foreground font-medium mt-0.5">{testResult.publicCommentReply}</p>
+                      </div>
+                      <div className="pt-2 border-t border-border/50">
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Direct Message (DM) Dispatched</span>
+                        <p className="text-xs text-foreground font-medium mt-0.5 whitespace-pre-wrap">{testResult.dmMessage}</p>
+                      </div>
+                      {testResult.buttonLabel && (
+                        <div className="pt-2 border-t border-border/50 flex items-center justify-between text-[11px]">
+                          <span className="text-muted-foreground">CTA Link:</span>
+                          <span className="font-mono text-primary flex items-center gap-1">
+                            {testResult.buttonLabel} → {testResult.buttonUrl}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 7. Bottom-Right Floating Support / Help Widget matching screenshot */}
       <div className="fixed bottom-6 right-6 z-40">

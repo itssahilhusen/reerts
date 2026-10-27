@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   ChevronDown,
@@ -210,28 +210,69 @@ export function AccountsView() {
     setOpenFaq((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleConnect = (providerId: string) => {
+  useEffect(() => {
+    fetch("/api/accounts")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.accounts && data.accounts.length > 0) {
+          const mapped: ConnectedAccount[] = data.accounts.map((a: any) => ({
+            id: a.id,
+            provider: a.provider,
+            name: a.name || a.handle,
+            handle: a.handle.startsWith("@") ? a.handle : `@${a.handle}`,
+            avatar: a.avatar || undefined,
+            profileUrl: `https://${a.provider}.com/${a.handle.replace("@", "")}`,
+            status: a.status || "active",
+          }));
+          setAccounts(mapped);
+        }
+      })
+      .catch((err) => console.error("Error loading accounts:", err));
+  }, []);
+
+  const handleConnect = async (providerId: string) => {
     setConnectingProvider(providerId);
-    setTimeout(() => {
+    try {
       const platform = PLATFORMS.find((p) => p.id === providerId);
-      const newAcc: ConnectedAccount = {
-        id: `${providerId}-${Date.now()}`,
-        provider: providerId,
-        name: `Alex Growth (${platform?.name})`,
-        handle: `@alex_${providerId}`,
-        profileUrl: `https://${providerId}.com/alexgrowth`,
-        status: "active",
-      };
-      setAccounts((prev) => [...prev, newAcc]);
+      const res = await fetch("/api/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: providerId,
+          name: `Alex Growth (${platform?.name})`,
+          handle: `@alex_${providerId}`,
+          status: "active",
+        }),
+      });
+      const data = await res.json();
+      if (data.account) {
+        const newAcc: ConnectedAccount = {
+          id: data.account.id,
+          provider: data.account.provider,
+          name: data.account.name,
+          handle: data.account.handle,
+          profileUrl: `https://${providerId}.com/alexgrowth`,
+          status: "active",
+        };
+        setAccounts((prev) => [newAcc, ...prev.filter((a) => a.id !== newAcc.id)]);
+        toast.success(`Connected to ${platform?.name} successfully.`);
+      }
+    } catch (err) {
+      toast.error("Failed to connect account");
+    } finally {
       setConnectingProvider(null);
-      toast.success(`Connected to ${platform?.name} successfully.`);
-    }, 800);
+    }
   };
 
-  const handleDisconnect = (accountId: string) => {
-    setAccounts((prev) => prev.filter((a) => a.id !== accountId));
-    setOpenMenuAccountId(null);
-    toast.success("Account disconnected.");
+  const handleDisconnect = async (accountId: string) => {
+    try {
+      await fetch(`/api/accounts?id=${accountId}`, { method: "DELETE" });
+      setAccounts((prev) => prev.filter((a) => a.id !== accountId));
+      setOpenMenuAccountId(null);
+      toast.success("Account disconnected.");
+    } catch (err) {
+      toast.error("Failed to disconnect account");
+    }
   };
 
   const handleUpdateProfile = (accountId: string) => {

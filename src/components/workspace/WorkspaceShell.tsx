@@ -47,6 +47,9 @@ import { BrandVoiceView } from "./BrandVoiceView";
 import { AnalyticsView } from "./AnalyticsView";
 import { AccountsView } from "./AccountsView";
 import { AutoDmView } from "./AutoDmView";
+import { CarouselView } from "./CarouselView";
+import { SpyView } from "./SpyView";
+import { MediaLibraryView } from "./MediaLibraryView";
 import { ComposerSheet } from "./ComposerSheet";
 import { ReertsLogo } from "@/components/ReertsLogo";
 import { toast } from "sonner";
@@ -483,14 +486,18 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
           {activeTab === "analytics" && <AnalyticsView />}
           {activeTab === "accounts" && <AccountsView />}
 
-          {(activeTab === "carousel" || activeTab === "spy" || activeTab === "pipelines" || activeTab === "videos" || activeTab === "conversations" || activeTab === "media-library" || activeTab === "affiliate" || activeTab === "guide") && (
+          {activeTab === "carousel" && <CarouselView onOpenComposer={openComposerWithData} />}
+          {activeTab === "spy" && <SpyView onOpenComposer={openComposerWithData} />}
+          {activeTab === "media-library" && <MediaLibraryView onOpenComposer={openComposerWithData} />}
+
+          {(activeTab === "pipelines" || activeTab === "videos" || activeTab === "conversations" || activeTab === "affiliate" || activeTab === "guide") && (
             <div className="flex-1 p-8 flex flex-col items-center justify-center text-center space-y-3">
               <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                 <Sparkles className="size-6" />
               </div>
               <h2 className="text-lg font-bold text-foreground capitalize">{activeTab.replace(/-/g, " ")} Module</h2>
               <p className="text-sm text-muted-foreground max-w-sm">
-                This workspace module is fully connected to your active brand voice and content pipeline.
+                This workspace module is currently integrated with your brand voice and content pipeline. Full visual orchestration is scheduled in the roadmap.
               </p>
               <button
                 type="button"
