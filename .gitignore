@@ -8,3 +8,11 @@ scratch
 .env.local
 *.log
 
+# SQLite Database & Journals
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-shm
+prisma/*.db-wal
+*.sqlite
+*.sqlite3
+
