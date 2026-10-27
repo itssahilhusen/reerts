@@ -68,6 +68,17 @@
   --tone-gray-border: #bfc4ce;
 }
 
+.bg-tone-green {
+  background-color: var(--tone-green);
+}
+.bg-tone-yellow {
+  background-color: var(--tone-yellow);
+}
+.bg-tone-blue {
+  background-color: var(--tone-blue);
+}
+
+
 .dark {
   --background: #181818;
   --foreground: #fafafa;

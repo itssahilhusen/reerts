@@ -28,6 +28,7 @@ model Workspace {
   mediaAssets MediaAsset[]
   competitors Competitor[]
   leads       Lead[]
+  personas    Persona[]
 }
 
 model User {
@@ -94,6 +95,8 @@ model SocialAccount {
   metadata     String?   @default("{}") // JSON string for followers, metrics
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  personas     Persona[]
 
   @@unique([workspaceId, provider, handle])
 }
@@ -278,4 +281,40 @@ model MediaAsset {
   sizeBytes   Int       @default(0)
   folder      String    @default("default")
   createdAt   DateTime  @default(now())
+}
+
+model Persona {
+  id                               String         @id @default(cuid())
+  workspaceId                      String
+  workspace                        Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  socialAccountId                  String?
+  socialAccount                    SocialAccount? @relation(fields: [socialAccountId], references: [id], onDelete: SetNull)
+  blogAccountId                    String?
+
+  personaNumber                    Int            @default(0) // 0: Slot A, 1: Slot B
+  name                             String         @default("Brand Voice")
+  status                           String         @default("active") // "active", "analyzing", "failed"
+  analysisMethod                   String         @default("myAccount") // "myAccount", "reference", "load", "aiGenerate"
+  analyzedPostsCount               Int            @default(0)
+  analyzedAt                       DateTime?      @default(now())
+  language                         String         @default("en")
+  contentLanguage                  String         @default("en")
+  sentenceStructureKeepOriginal     Boolean        @default(false)
+
+  // Structured Voice Analysis Sections
+  profileIdentity                  String?        @db.Text
+  targetAudience                   String?        @default("{}") // JSON: demographic_profile, follow_motivation, audience_needs, implicit_promise
+  hookSetting                      String?        @default("{}") // JSON: top_patterns, hook_tone, notable_techniques, avg_hook_length
+  writingStyleAnalysis             String?        @default("{}") // JSON: title_format, sentence_structure, thought_development, ending_signatures, emotional_distance, humor_and_personality
+  ctaSetting                       String?        @default("{\"items\":[]}") // JSON: array of { type, instruction, examples }
+  referenceLinkSetting             String?        @default("{\"enabled\":false,\"format\":\"\",\"placement_note\":null}") // JSON
+  coreTopics                       String?        @default("[]") // JSON: string[]
+  topPerformingPatterns            String?        @db.Text
+  additionalInstructions           String?        @db.Text
+
+  createdAt                        DateTime       @default(now())
+  updatedAt                        DateTime       @updatedAt
+
+  @@index([workspaceId])
+  @@index([socialAccountId])
 }

@@ -8,8 +8,58 @@ scratch
 .env.local
 *.log
 
-# Database Dumps
+# Database Dumps & Caches
 *.sql
 *.dump
+*.cache.json
+prisma/*_cache.json
 
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
 
+# Reverse Engineering (RE) Artifacts & Analysis Dumps
+chunks/
+scripts/
+extracted/
+decompiled/
+dumps/
+rea-temp-*/
+.rea/
+
+# RE Inspection JSON, HTML & Text Dumps
+api_strings.json
+chunk_findings.json
+detected_props.json
+e_props.json
+entry_strings.json
+guest_strings.json
+messages_extracted.json
+target_persona_snippets.json
+rendered_body.html
+sidebar_inset.html
+flight_matches.txt
+target_flight.txt
+
+# General RE Dump & Snippet Patterns
+*_strings.json
+*_findings.json
+*_props.json
+*_extracted.json
+*_snippets.json
+*_matches.txt
+target_*.txt
+target_*.json
+*.flight
+*.flight.txt
+
+# Root-level Scratch / Extracted JS & HTML
+/*.js
+!next.config.js
+!tailwind.config.js
+!postcss.config.js
+!prettier.config.js
+!eslint.config.js
+/*.html
