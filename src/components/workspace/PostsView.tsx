@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Plus, Search, Filter, MoreHorizontal, CheckCircle2, Clock, FileText, ArrowUpRight } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, CheckCircle2, Clock, FileText, ArrowUpRight, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PostsViewProps {
@@ -52,13 +52,16 @@ export function PostsView({ onOpenComposer }: PostsViewProps) {
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background p-6 space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Posts Management</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Overview of all your drafted, scheduled, and published social content.
-          </p>
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-4 lg:px-6 py-5 font-sans min-w-0 space-y-5">
+      {/* 1. Posts Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center text-foreground">
+            <CheckSquare className="size-7 shrink-0 text-foreground" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Posts
+          </h1>
         </div>
 
         <button

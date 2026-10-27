@@ -145,22 +145,19 @@ export function BrandVoiceView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* 1. Header */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <Sliders className="size-6 sm:size-7 text-primary/90" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            Brand Voice
-          </h1>
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-4 lg:px-6 py-5 font-sans min-w-0">
+      {/* 1. Brand Voice Title Row */}
+      <div className="flex items-center gap-2.5 mb-4 shrink-0">
+        <div className="flex items-center text-foreground">
+          <Sliders className="size-7 shrink-0 text-foreground" />
         </div>
-        <p className="text-xs sm:text-sm text-muted-foreground">
-          AI analyzes your posts to learn your account&apos;s brand voice.
-        </p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          Brand Voice
+        </h1>
       </div>
 
       {/* 2. Tabs Bar */}
-      <div className="flex items-center justify-between border-b border-border pb-3">
+      <div className="flex items-center justify-between border-b border-border pb-3 mb-6">
         <div className="inline-flex rounded-xl bg-muted p-1">
           <button
             type="button"

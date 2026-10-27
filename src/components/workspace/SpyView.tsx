@@ -109,19 +109,16 @@ export function SpyView({ onOpenComposer }: SpyViewProps) {
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background p-6 space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-foreground">Competitor Spy & Benchmarking</h1>
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-600 dark:text-rose-400">
-              <Flame className="size-3" /> Viral Intel
-            </span>
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-4 lg:px-6 py-5 font-sans min-w-0 space-y-5">
+      {/* 1. Competitor Spy Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center text-foreground">
+            <Flame className="size-7 shrink-0 text-foreground" />
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Monitor public competitor metrics, dissect winning hooks, and remix top posts into original content.
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Competitor Spy & Benchmarking
+          </h1>
         </div>
 
         {/* Add Competitor Input */}

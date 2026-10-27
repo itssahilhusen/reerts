@@ -316,33 +316,30 @@ export function AccountsView() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto py-4 md:py-6 h-full bg-background">
-      <div className="px-4 lg:px-6">
-        {/* 1. Header */}
-        <div className="flex items-center justify-between gap-2 mb-8">
-          <div className="flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="tabler-icon tabler-icon-users text-primary/90 sm:h-8 sm:w-8 h-6 w-6"
-            >
-              <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
-              <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
-            </svg>
-            <h1 className="text-2xl sm:text-3xl text-primary/90 font-bold tracking-tight">
-              Connected Accounts
-            </h1>
-          </div>
+    <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-5 h-full bg-background font-sans min-w-0">
+      {/* 1. Connected Accounts Title Row */}
+      <div className="flex items-center gap-2.5 mb-6 shrink-0">
+        <div className="flex items-center text-foreground">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-7 shrink-0 text-foreground"
+          >
+            <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+            <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
+          </svg>
         </div>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          Connected Accounts
+        </h1>
+      </div>
 
         {/* 2. FAQ Accordion Grid */}
         <div className="mb-6">
@@ -713,7 +710,6 @@ export function AccountsView() {
             ))}
           </div>
         </div>
-      </div>
 
       {/* MODAL 1: Instagram Professional Account Guide */}
       {activeHelp === "instagram" && (

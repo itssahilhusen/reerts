@@ -48,14 +48,16 @@ export function CalendarView({ onOpenComposer }: CalendarViewProps) {
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Content Calendar</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Visualize your multi-platform publishing schedule and optimal time slots.
-          </p>
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-4 lg:px-6 py-5 font-sans min-w-0 space-y-5">
+      {/* 1. Content Calendar Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center text-foreground">
+            <CalendarIcon className="size-7 shrink-0 text-foreground" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Content Calendar
+          </h1>
         </div>
 
         <div className="flex items-center gap-2">

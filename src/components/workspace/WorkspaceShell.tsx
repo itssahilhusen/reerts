@@ -36,7 +36,8 @@ import {
   MoreVertical,
   User,
   CreditCard,
-  Languages
+  Languages,
+  Rss
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StudioView } from "./StudioView";
@@ -143,7 +144,7 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
       group: "Create",
       items: [
         { id: "personas", label: "Brand Voice", icon: Sliders },
-        { id: "ideas", label: "Ideas", icon: Sparkles },
+        { id: "ideas", label: "Ideas", icon: Rss },
         { id: "studio", label: "Studio", icon: Pencil },
         { id: "carousel", label: "Carousel", badge: "new", icon: Layers },
         { id: "videos", label: "Videos", badge: "Soon", icon: Layers, soon: true },

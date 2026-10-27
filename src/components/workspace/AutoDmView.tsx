@@ -218,11 +218,10 @@ export function AutoDmView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-6 py-5 space-y-5 font-sans">
-      {/* 1. Page Title & Description */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          {/* Cute Robot Line Art Icon matching screenshot */}
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-4 lg:px-6 py-5 font-sans min-w-0 space-y-5">
+      {/* 1. Auto DM Title Row */}
+      <div className="flex items-center gap-2.5 mb-4 shrink-0">
+        <div className="flex items-center text-foreground">
           <svg 
             viewBox="0 0 24 24" 
             fill="none" 
@@ -230,7 +229,7 @@ export function AutoDmView() {
             strokeWidth="2" 
             strokeLinecap="round" 
             strokeLinejoin="round" 
-            className="size-6 text-foreground shrink-0"
+            className="size-7 text-foreground shrink-0"
           >
             <rect width="18" height="12" x="3" y="6" rx="2" />
             <path d="M12 2v4" />
@@ -240,13 +239,10 @@ export function AutoDmView() {
             <path d="M15 11v2" />
             <path d="M9 16h6" />
           </svg>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            Auto DM, comments & email
-          </h1>
         </div>
-        <p className="text-xs text-muted-foreground max-w-4xl leading-relaxed">
-          Automate replies and DMs on Instagram and Facebook, or send a resource by email when someone requests it in a Threads comment.
-        </p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          Auto DM, comments & email
+        </h1>
       </div>
 
       {/* 2. Account Selector & Action Strip */}

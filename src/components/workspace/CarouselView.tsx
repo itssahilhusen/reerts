@@ -188,17 +188,16 @@ export function CarouselView({ onOpenComposer }: CarouselViewProps) {
   const activeSlide = slides[activeSlideIndex] || slides[0];
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background">
-      {/* Top Bar matching reference */}
-      <div className="h-14 border-b border-border bg-card/50 px-6 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-            <Layers className="size-4" />
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-background px-4 lg:px-6 py-5 font-sans min-w-0">
+      {/* 1. Carousel Studio Title Row */}
+      <div className="flex items-center justify-between gap-4 mb-4 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center text-foreground">
+            <Layers className="size-7 shrink-0 text-foreground" />
           </div>
-          <div>
-            <h1 className="text-sm font-bold text-foreground">AI Carousel Studio</h1>
-            <p className="text-[11px] text-muted-foreground">Turn links, notes, or topics into publish-ready carousels</p>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            AI Carousel Studio
+          </h1>
         </div>
 
         <div className="flex items-center gap-2">

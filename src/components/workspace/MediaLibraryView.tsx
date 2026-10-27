@@ -84,20 +84,22 @@ export function MediaLibraryView({ onOpenComposer }: MediaLibraryViewProps) {
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Media Library</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Store, search, and attach reusable visual assets and videos to your scheduled posts.
-          </p>
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-4 lg:px-6 py-5 font-sans min-w-0 space-y-5">
+      {/* 1. Media Library Title Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center text-foreground">
+            <FolderOpen className="size-7 shrink-0 text-foreground" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Media Library
+          </h1>
         </div>
 
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
         >
           <Upload className="size-3.5" />
           <span>Upload Media</span>

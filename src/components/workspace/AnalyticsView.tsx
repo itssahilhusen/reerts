@@ -35,12 +35,15 @@ export function AnalyticsView() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight text-foreground">Cross-Platform Analytics</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Unified performance insights across all your connected social channels.
-        </p>
+    <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-4 lg:px-6 py-5 font-sans min-w-0 space-y-5">
+      {/* 1. Analytics Title Row */}
+      <div className="flex items-center gap-2.5 mb-4 shrink-0">
+        <div className="flex items-center text-foreground">
+          <BarChart2 className="size-7 shrink-0 text-foreground" />
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          Analytics
+        </h1>
       </div>
 
       {/* KPI Cards */}
