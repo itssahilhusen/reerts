@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   Menu, 
   X, 
@@ -51,6 +52,7 @@ import { AutoDmView } from "./AutoDmView";
 import { CarouselView } from "./CarouselView";
 import { SpyView } from "./SpyView";
 import { MediaLibraryView } from "./MediaLibraryView";
+import { ConversationsView } from "./ConversationsView";
 import { ComposerSheet } from "./ComposerSheet";
 import { ReertsLogo } from "@/components/ReertsLogo";
 import { toast } from "sonner";
@@ -92,8 +94,52 @@ interface NavSection {
   items: NavItem[];
 }
 
+export const TAB_ROUTES: Record<WorkspaceTab, string> = {
+  studio: "/studio",
+  ideas: "/ideas",
+  calendar: "/calendar",
+  posts: "/posts",
+  personas: "/personas",
+  analytics: "/analytics",
+  accounts: "/accounts",
+  spy: "/spy",
+  carousel: "/carousel",
+  "media-library": "/media-library",
+  "engagement-automation": "/engagement-automation",
+  pipelines: "/pipelines",
+  videos: "/videos",
+  conversations: "/conversations",
+  affiliate: "/affiliate",
+  guide: "/guide",
+  support: "/support",
+};
+
 export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) {
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialView);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const getTabFromPath = (path: string): WorkspaceTab => {
+    if (path.startsWith("/ideas")) return "ideas";
+    if (path.startsWith("/personas")) return "personas";
+    if (path.startsWith("/calendar")) return "calendar";
+    if (path.startsWith("/posts")) return "posts";
+    if (path.startsWith("/accounts")) return "accounts";
+    if (path.startsWith("/analytics")) return "analytics";
+    if (path.startsWith("/engagement-automation") || path.startsWith("/auto-dm")) return "engagement-automation";
+    if (path.startsWith("/carousel")) return "carousel";
+    if (path.startsWith("/spy")) return "spy";
+    if (path.startsWith("/media-library")) return "media-library";
+    if (path.startsWith("/conversations")) return "conversations";
+    if (path.startsWith("/pipelines")) return "pipelines";
+    if (path.startsWith("/videos")) return "videos";
+    if (path.startsWith("/affiliate")) return "affiliate";
+    if (path.startsWith("/guide")) return "guide";
+    if (path.startsWith("/support")) return "support";
+    if (path.startsWith("/studio")) return "studio";
+    return initialView;
+  };
+
+  const activeTab = getTabFromPath(pathname || "") || initialView;
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerPost, setComposerPost] = useState<any>(null);
@@ -262,14 +308,14 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
                 {section.items.map((item) => {
                   const isActive = activeTab === item.id;
                   const Icon = item.icon;
+                  const href = item.soon ? "#" : TAB_ROUTES[item.id] || "/studio";
                   return (
-                    <button
+                    <Link
                       key={item.id}
-                      type="button"
-                      disabled={item.soon}
-                      onClick={() => {
-                        setActiveTab(item.id);
+                      href={href}
+                      onClick={(e) => {
                         if (item.soon) {
+                          e.preventDefault();
                           toast.info(`${item.label} module is coming soon!`);
                         }
                       }}
@@ -300,7 +346,7 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
                       {!isSidebarCollapsed && item.badgeCustom && (
                         item.badgeCustom
                       )}
-                    </button>
+                    </Link>
                   );
                 })}
               </div>
@@ -310,9 +356,8 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
           {/* Lower Nav Links matching reference */}
           <div className="pt-2 border-t border-border/50 space-y-0.5">
             {/* Accounts */}
-            <button
-              type="button"
-              onClick={() => setActiveTab("accounts")}
+            <Link
+              href="/accounts"
               className={cn(
                 "group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-all text-left",
                 activeTab === "accounts"
@@ -322,7 +367,7 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
             >
               <UserCheck className="size-4 shrink-0" />
               {!isSidebarCollapsed && <span className="truncate">Accounts</span>}
-            </button>
+            </Link>
 
             {/* Affiliate Program */}
             <button
@@ -490,8 +535,9 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
           {activeTab === "carousel" && <CarouselView onOpenComposer={openComposerWithData} />}
           {activeTab === "spy" && <SpyView onOpenComposer={openComposerWithData} />}
           {activeTab === "media-library" && <MediaLibraryView onOpenComposer={openComposerWithData} />}
+          {activeTab === "conversations" && <ConversationsView />}
 
-          {(activeTab === "pipelines" || activeTab === "videos" || activeTab === "conversations" || activeTab === "affiliate" || activeTab === "guide") && (
+          {(activeTab === "pipelines" || activeTab === "videos" || activeTab === "affiliate" || activeTab === "guide" || activeTab === "support") && (
             <div className="flex-1 p-8 flex flex-col items-center justify-center text-center space-y-3">
               <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                 <Sparkles className="size-6" />
@@ -500,13 +546,12 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
               <p className="text-sm text-muted-foreground max-w-sm">
                 This workspace module is currently integrated with your brand voice and content pipeline. Full visual orchestration is scheduled in the roadmap.
               </p>
-              <button
-                type="button"
-                onClick={() => setActiveTab("studio")}
+              <Link
+                href="/studio"
                 className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
               >
                 Back to Studio
-              </button>
+              </Link>
             </div>
           )}
         </main>
