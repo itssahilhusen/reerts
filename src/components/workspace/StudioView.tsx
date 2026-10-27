@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { 
   Sparkles, 
@@ -14,94 +14,16 @@ import {
   Maximize2,
   Globe,
   Tv,
-  Newspaper
+  Newspaper,
+  Loader2,
+  Trash2,
+  CheckCircle2,
+  Clock,
+  Send
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-
-export interface IdeaCard {
-  id: string;
-  sourceType: "Web" | "YouTube" | "News";
-  brandVoice: string;
-  title: string;
-  excerpt: string;
-  date: string;
-  sources: string[];
-}
-
-export interface PublishedCard {
-  id: string;
-  tag: string;
-  title: string;
-  excerpt: string;
-  date: string;
-}
-
-const IDEA_CARDS: IdeaCard[] = [
-  {
-    id: "idea-1",
-    sourceType: "YouTube",
-    brandVoice: "Brand Voice A",
-    title: "I Explored the Top AI Tools in Every Category",
-    excerpt: "... tools that can work with multiple AI models for research and answering questions. This is a spontaneous live discovery session, not a controlled benchmark ...",
-    date: "2026-10-23",
-    sources: [
-      "YouTube - I Explored the Top AI Tools in Every Category",
-    ],
-  },
-  {
-    id: "idea-2",
-    sourceType: "News",
-    brandVoice: "Brand Voice A",
-    title: "Pharma leaders should embed AI into business goals",
-    excerpt: "Leaders can help their teams shift from survive mode to thrive mode by positioning AI as a tool that can expand the drug discovery capabilities and open new ...",
-    date: "2026-10-25",
-    sources: [
-      "News - Pharma leaders should embed AI into business ...",
-    ],
-  },
-  {
-    id: "idea-3",
-    sourceType: "YouTube",
-    brandVoice: "Brand Voice A",
-    title: "AirPods 5 vs AirPods Pro 3: The Better Deal Isn't Obvious",
-    excerpt: "AirPods 5 Tips, Tricks & Hidden Features! AirPods Pro 3, exploring acoustic transparency and next-gen computational audio for active creators.",
-    date: "2026-10-25",
-    sources: [
-      "YouTube - AirPods 5 vs AirPods Pro 3: The Better Deal Is...",
-    ],
-  },
-  {
-    id: "idea-4",
-    sourceType: "Web",
-    brandVoice: "Brand Voice A",
-    title: "AI Agent Discovery and Security Posture Management",
-    excerpt: "Technical articles exploring methods to discover, index, and secure autonomous AI agents across SaaS, cloud, and federated environments.",
-    date: "2026-10-24",
-    sources: [
-      "media.mit.edu - NandaIndex: Making AI Agents Discove...",
-      "docs.cyberark.com - Introduction to Secure AI agents | ...",
-      "kowr.com - AI Security Posture Management (AI SPM)",
-    ],
-  },
-];
-
-const PUBLISHED_CARDS: PublishedCard[] = [
-  {
-    id: "pub-1",
-    tag: "Manually created",
-    title: "The humanoid robots of the future are here today. Tesla is ...",
-    excerpt: "Tesla is officially accelerating production on its Optimus humanoid robots, moving general-purpose bipedal machines straight from research labs to factory floors. 🦾 Designed...",
-    date: "2026-10-25 AM 12:08",
-  },
-  {
-    id: "pub-2",
-    tag: "Manually created",
-    title: "Time Magazine's best inventions of 2026 list",
-    excerpt: "TIME's annual Best Inventions of 2026 list has officially arrived, spotlighting the most impactful breakthroughs shaping the next era of global technology. 🚀 From cutting-edge...",
-    date: "2026-10-23 PM 6:47",
-  },
-];
+import { PostRecord, IdeaRecord } from "@/types";
 
 interface StudioViewProps {
   onOpenComposer: (post?: any) => void;
@@ -109,26 +31,106 @@ interface StudioViewProps {
 
 export function StudioView({ onOpenComposer }: StudioViewProps) {
   const [account, setAccount] = useState("theaiseed");
+  const [ideas, setIdeas] = useState<IdeaRecord[]>([]);
+  const [posts, setPosts] = useState<PostRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDiscovering, setIsDiscovering] = useState(false);
 
-  const handleCopy = (card: IdeaCard) => {
-    navigator.clipboard?.writeText?.(`${card.title}\n\n${card.excerpt}`);
+  const fetchStudioData = async () => {
+    try {
+      setLoading(true);
+      const [ideasRes, postsRes] = await Promise.all([
+        fetch("/api/ideas"),
+        fetch("/api/posts"),
+      ]);
+      const ideasData = await ideasRes.json();
+      const postsData = await postsRes.json();
+
+      if (ideasData.ideas) setIdeas(ideasData.ideas);
+      if (postsData.posts) setPosts(postsData.posts);
+    } catch (err) {
+      toast.error("Failed to load Studio content");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudioData();
+  }, []);
+
+  const handleCopy = (card: { title: string; excerpt?: string | null }) => {
+    navigator.clipboard?.writeText?.(`${card.title}\n\n${card.excerpt || ""}`);
     toast.success("Content copied to clipboard");
   };
 
-  const handleGenerateDraft = (card: IdeaCard) => {
+  const handleGenerateDraft = (card: IdeaRecord) => {
     onOpenComposer({
       title: card.title,
-      content: card.excerpt,
+      content: `${card.title}\n\n${card.excerpt || ""}\n\nHere are 3 key takeaways you need to know:\n\n1. \n2. \n3. \n\n#socialmedia #growth`,
     });
     toast.info("Draft generated in composer");
   };
 
+  const handlePublishNow = async (post: PostRecord) => {
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "PUBLISHED" }),
+      });
+      const data = await res.json();
+      if (data.post) {
+        setPosts(posts.map((p) => (p.id === post.id ? data.post : p)));
+        toast.success(`Published "${post.title}" successfully!`);
+      }
+    } catch (err) {
+      toast.error("Failed to publish post");
+    }
+  };
+
+  const handleDeletePost = async (id: string) => {
+    try {
+      const res = await fetch(`/api/posts/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setPosts(posts.filter((p) => p.id !== id));
+        toast.info("Post deleted");
+      }
+    } catch (err) {
+      toast.error("Failed to delete post");
+    }
+  };
+
+  const handleDiscoverIdeas = async () => {
+    setIsDiscovering(true);
+    try {
+      const res = await fetch("/api/ideas/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: "Scaling with AI agents in 2026" }),
+      });
+      const data = await res.json();
+      if (data.ideas) {
+        setIdeas([...data.ideas, ...ideas]);
+        toast.success("Discovered 4 new viral content ideas!");
+      }
+    } catch (err) {
+      toast.error("Failed to generate ideas");
+    } finally {
+      setIsDiscovering(false);
+    }
+  };
+
+  // Group posts by status
+  const drafts = posts.filter((p) => p.status === "DRAFT");
+  const scheduled = posts.filter((p) => p.status === "SCHEDULED");
+  const published = posts.filter((p) => p.status === "PUBLISHED");
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-background px-4 lg:px-6 py-5 font-sans min-w-0">
-      {/* 1. Content Studio Title Row matching reference screenshot */}
+      {/* 1. Content Studio Title Row */}
       <div className="flex items-center gap-2.5 mb-4 shrink-0">
         <div className="flex items-center text-foreground">
-          {/* Wand Icon */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -162,11 +164,12 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
         {/* Discover Content Ideas Button */}
         <button
           type="button"
-          onClick={() => toast.info("Scanning idea sources for high-engagement topics...")}
-          className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 shadow-2xs text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+          disabled={isDiscovering}
+          onClick={handleDiscoverIdeas}
+          className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 shadow-2xs text-sm font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
         >
-          <Sparkles className="size-4 text-muted-foreground" />
-          <span>Discover Content Ideas</span>
+          {isDiscovering ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4 text-muted-foreground" />}
+          <span>{isDiscovering ? "Scanning Sources..." : "Discover Content Ideas"}</span>
         </button>
 
         {/* Create Content Black Pill Button */}
@@ -180,17 +183,17 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
         </button>
       </div>
 
-      {/* 3. Four Equal Kanban Columns with responsive scroll containment */}
+      {/* 3. Four Equal Kanban Columns */}
       <div className="flex-1 min-h-0 overflow-x-auto pb-2">
         <div className="grid grid-cols-4 gap-5 h-full min-w-[1120px] xl:min-w-0">
-          {/* Column 1: Content Ideas (10) */}
+          {/* Column 1: Content Ideas */}
           <div className="flex flex-col h-full rounded-2xl border border-border bg-[#fafafb] dark:bg-[#1f1f23] shadow-2xs overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-card/50">
               <div className="flex items-center gap-2">
                 <span className="size-2.5 rounded-full bg-neutral-400 shrink-0" />
                 <h2 className="text-sm font-semibold text-foreground">Content Ideas</h2>
-                <span className="text-sm text-muted-foreground font-normal">(10)</span>
+                <span className="text-sm text-muted-foreground font-normal">({ideas.length})</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <button type="button" className="hover:text-foreground transition-colors p-0.5" title="Filter">
@@ -199,61 +202,51 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
                 <button type="button" className="hover:text-foreground transition-colors p-0.5" title="Sort">
                   <ArrowUpDown className="size-4" />
                 </button>
-                <button type="button" className="hover:text-foreground transition-colors p-0.5" title="Expand">
-                  <Maximize2 className="size-4" />
-                </button>
               </div>
             </div>
 
-            {/* Cards List with Dashed Borders */}
+            {/* Ideas Cards List with Dashed Borders */}
             <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 sidebar-scrollbar">
-              {IDEA_CARDS.map((card) => (
+              {ideas.map((card) => (
                 <div
                   key={card.id}
                   className="rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-white dark:bg-[#26262b] p-4 space-y-3 shadow-2xs hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors"
                 >
-                  {/* Top Badge Row */}
                   <div className="flex items-center justify-between gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-md bg-muted/80 px-2.5 py-1 text-xs font-semibold text-foreground">
-                      {card.sourceType === "Web" && <Globe className="size-3.5 text-muted-foreground" />}
-                      {card.sourceType === "YouTube" && <Tv className="size-3.5 text-red-500" />}
-                      {card.sourceType === "News" && <Newspaper className="size-3.5 text-muted-foreground" />}
+                      {card.sourceType.toLowerCase().includes("web") && <Globe className="size-3.5 text-muted-foreground" />}
+                      {card.sourceType.toLowerCase().includes("youtube") && <Tv className="size-3.5 text-red-500" />}
+                      {card.sourceType.toLowerCase().includes("news") && <Newspaper className="size-3.5 text-muted-foreground" />}
+                      {!["web", "youtube", "news"].some((k) => card.sourceType.toLowerCase().includes(k)) && (
+                        <Sparkles className="size-3.5 text-primary" />
+                      )}
                       <span>{card.sourceType}</span>
                     </span>
-                    <span className="rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                      {card.brandVoice}
+                    <span className="rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                      {card.viralityScore}% Virality
                     </span>
                   </div>
 
-                  {/* Title */}
                   <h3 className="font-bold text-sm leading-snug text-foreground">
                     {card.title}
                   </h3>
 
-                  {/* Excerpt */}
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {card.excerpt}
-                  </p>
+                  {card.excerpt && (
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                      {card.excerpt}
+                    </p>
+                  )}
 
-                  {/* Date */}
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
-                    <CalendarIcon className="size-3.5" />
-                    <span>{card.date}</span>
-                  </div>
-
-                  {/* Sources list */}
-                  {card.sources.length > 0 && (
-                    <div className="space-y-1.5 pt-1 border-t border-border/50">
-                      {card.sources.map((src, i) => (
-                        <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer truncate">
-                          <Link2 className="size-3.5 shrink-0 text-muted-foreground" />
-                          <span className="truncate">{src}</span>
-                        </div>
+                  {card.tags && card.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {card.tags.map((t) => (
+                        <span key={t} className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-medium text-primary">
+                          {t}
+                        </span>
                       ))}
                     </div>
                   )}
 
-                  {/* Action Strip */}
                   <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
                     <button
                       type="button"
@@ -277,39 +270,78 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
             </div>
           </div>
 
-          {/* Column 2: Drafts (0) */}
+          {/* Column 2: Drafts */}
           <div className="flex flex-col h-full rounded-2xl border border-amber-200/70 dark:border-amber-900/40 bg-[#fbf3e1] dark:bg-[#252018] shadow-2xs overflow-hidden">
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-amber-200/60 dark:border-amber-900/30">
               <div className="flex items-center gap-2">
                 <span className="size-2.5 rounded-full bg-amber-400 shrink-0" />
                 <h2 className="text-sm font-semibold text-foreground">Drafts</h2>
-                <span className="text-sm text-muted-foreground font-normal">(0)</span>
+                <span className="text-sm text-muted-foreground font-normal">({drafts.length})</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <button type="button" className="hover:text-foreground transition-colors p-0.5" title="Filter">
-                  <Filter className="size-4" />
-                </button>
                 <button type="button" className="hover:text-foreground transition-colors p-0.5" title="Sort">
                   <ArrowUpDown className="size-4" />
                 </button>
               </div>
             </div>
 
-            {/* Empty State */}
-            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground/60 font-medium select-none">
-              No items yet
+            <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 sidebar-scrollbar">
+              {drafts.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground/60 font-medium select-none">
+                  No drafts yet
+                </div>
+              ) : (
+                drafts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="rounded-xl border border-border/80 bg-white dark:bg-[#26262b] p-4 space-y-3 shadow-2xs hover:shadow-xs transition-shadow"
+                  >
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="font-semibold text-amber-600 dark:text-amber-400">Draft</span>
+                      <div className="flex items-center gap-1">
+                        {post.platforms.map((plat) => (
+                          <Image key={plat} src={`/images/platforms/${plat === "x" ? "x-light.svg" : plat + ".svg"}`} alt={plat} width={12} height={12} className={plat === "x" ? "dark:invert" : ""} />
+                        ))}
+                      </div>
+                    </div>
+
+                    <h3 className="font-bold text-sm leading-snug text-foreground">
+                      {post.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {post.content}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePost(post.id)}
+                        className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                        title="Delete draft"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenComposer({ id: post.id, title: post.title, content: post.content, platforms: post.platforms })}
+                        className="inline-flex items-center gap-1 font-bold text-primary hover:underline"
+                      >
+                        <span>Edit Post</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Column 3: Scheduled (0) */}
+          {/* Column 3: Scheduled */}
           <div className="flex flex-col h-full rounded-2xl border border-emerald-200/70 dark:border-emerald-900/40 bg-[#e8f9eb] dark:bg-[#1a261d] shadow-2xs overflow-hidden">
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-200/60 dark:border-emerald-900/30">
               <div className="flex items-center gap-2">
                 <span className="size-2.5 rounded-full bg-emerald-500 shrink-0" />
                 <h2 className="text-sm font-semibold text-foreground">Scheduled</h2>
-                <span className="text-sm text-muted-foreground font-normal">(0)</span>
+                <span className="text-sm text-muted-foreground font-normal">({scheduled.length})</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <button type="button" className="hover:text-foreground transition-colors p-0.5" title="Sort">
@@ -318,20 +350,64 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
               </div>
             </div>
 
-            {/* Empty State */}
-            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground/60 font-medium select-none">
-              No items yet
+            <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 sidebar-scrollbar">
+              {scheduled.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground/60 font-medium select-none">
+                  No scheduled items
+                </div>
+              ) : (
+                scheduled.map((post) => (
+                  <div
+                    key={post.id}
+                    className="rounded-xl border border-border/80 bg-white dark:bg-[#26262b] p-4 space-y-3 shadow-2xs hover:shadow-xs transition-shadow"
+                  >
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                        <Clock className="size-3" /> Scheduled
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {post.platforms.map((plat) => (
+                          <Image key={plat} src={`/images/platforms/${plat === "x" ? "x-light.svg" : plat + ".svg"}`} alt={plat} width={12} height={12} className={plat === "x" ? "dark:invert" : ""} />
+                        ))}
+                      </div>
+                    </div>
+
+                    <h3 className="font-bold text-sm leading-snug text-foreground">
+                      {post.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {post.content}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handlePublishNow(post)}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                      >
+                        <Send className="size-3" /> Publish Now
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenComposer({ id: post.id, title: post.title, content: post.content, platforms: post.platforms })}
+                        className="font-bold text-primary hover:underline"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Column 4: Published (2) */}
+          {/* Column 4: Published */}
           <div className="flex flex-col h-full rounded-2xl border border-blue-200/70 dark:border-blue-900/40 bg-[#e9f2ff] dark:bg-[#192233] shadow-2xs overflow-hidden">
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-blue-200/60 dark:border-blue-900/30">
               <div className="flex items-center gap-2">
                 <span className="size-2.5 rounded-full bg-blue-500 shrink-0" />
                 <h2 className="text-sm font-semibold text-foreground">Published</h2>
-                <span className="text-sm text-muted-foreground font-normal">(2)</span>
+                <span className="text-sm text-muted-foreground font-normal">({published.length})</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <button type="button" className="hover:text-foreground transition-colors p-0.5" title="Sort">
@@ -340,36 +416,46 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
               </div>
             </div>
 
-            {/* Solid White Cards */}
             <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 sidebar-scrollbar">
-              {PUBLISHED_CARDS.map((card) => (
-                <div
-                  key={card.id}
-                  className="rounded-xl border border-border/80 bg-white dark:bg-[#26262b] p-4 space-y-2.5 shadow-2xs hover:shadow-xs transition-shadow"
-                >
-                  {/* Tag */}
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                    <Pencil className="size-3" />
-                    <span>{card.tag}</span>
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="font-bold text-sm leading-snug text-foreground">
-                    {card.title}
-                  </h3>
-
-                  {/* Excerpt */}
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {card.excerpt}
-                  </p>
-
-                  {/* Date */}
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono pt-1">
-                    <CalendarIcon className="size-3.5" />
-                    <span>{card.date}</span>
-                  </div>
+              {published.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground/60 font-medium select-none">
+                  No published items
                 </div>
-              ))}
+              ) : (
+                published.map((post) => (
+                  <div
+                    key={post.id}
+                    className="rounded-xl border border-border/80 bg-white dark:bg-[#26262b] p-4 space-y-2.5 shadow-2xs hover:shadow-xs transition-shadow"
+                  >
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400">
+                        <CheckCircle2 className="size-3" /> Published
+                      </span>
+                      <span className="font-mono text-[11px] font-bold text-foreground">
+                        {post.impressions ? `${(post.impressions / 1000).toFixed(1)}K views` : "Live"}
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-sm leading-snug text-foreground">
+                      {post.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {post.content}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[11px] text-muted-foreground">
+                      <span>{post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : "Just now"}</span>
+                      <button
+                        type="button"
+                        onClick={() => onOpenComposer({ title: post.title, content: post.content, platforms: post.platforms })}
+                        className="font-bold text-primary hover:underline"
+                      >
+                        Remix Post
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

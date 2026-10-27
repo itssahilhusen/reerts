@@ -137,53 +137,113 @@ export function ComposerSheet({
     }, 800);
   };
 
-  const handlePostNow = () => {
-    toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 1200)),
-      {
-        loading: "Publishing simultaneously across all connected platforms...",
-        success: "Successfully published to X, LinkedIn, and Threads! 🎉",
-        error: "Failed to publish",
+  const handlePostNow = async () => {
+    try {
+      const payload = {
+        title: threads[0].content.slice(0, 40),
+        content: threads[0].content,
+        rawThreads: threads,
+        platforms: selectedPlatforms,
+        status: "PUBLISHED",
+      };
+
+      let res;
+      if (initialPost?.id) {
+        res = await fetch(`/api/posts/${initialPost.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch("/api/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
       }
-    );
-    onSavePost?.({
-      id: Date.now().toString(),
-      title: threads[0].content.slice(0, 40),
-      content: threads[0].content,
-      status: "published",
-      platforms: selectedPlatforms,
-      date: "Just now",
-    });
-    setTimeout(() => {
-      onClose();
-    }, 1500);
+
+      if (res.ok) {
+        toast.success("Successfully published simultaneously across connected channels! 🎉");
+        onSavePost?.(payload);
+        onClose();
+      } else {
+        toast.error("Failed to publish post");
+      }
+    } catch (err) {
+      toast.error("Error communicating with posts API");
+    }
   };
 
-  const handleSaveDraft = () => {
-    onSavePost?.({
-      id: Date.now().toString(),
-      title: threads[0].content.slice(0, 40),
-      content: threads[0].content,
-      status: "draft",
-      platforms: selectedPlatforms,
-      date: "Drafted today",
-    });
-    toast.success("Draft saved to Content Studio!");
-    onClose();
+  const handleSaveDraft = async () => {
+    try {
+      const payload = {
+        title: threads[0].content.slice(0, 40),
+        content: threads[0].content,
+        rawThreads: threads,
+        platforms: selectedPlatforms,
+        status: "DRAFT",
+      };
+
+      let res;
+      if (initialPost?.id) {
+        res = await fetch(`/api/posts/${initialPost.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch("/api/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (res.ok) {
+        toast.success("Draft saved to Content Studio!");
+        onSavePost?.(payload);
+        onClose();
+      }
+    } catch (err) {
+      toast.error("Error saving draft");
+    }
   };
 
-  const handleSchedule = () => {
-    onSavePost?.({
-      id: Date.now().toString(),
-      title: threads[0].content.slice(0, 40),
-      content: threads[0].content,
-      status: "scheduled",
-      platforms: selectedPlatforms,
-      date: new Date(scheduleDate).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
-    });
-    setScheduleModalOpen(false);
-    toast.success(`Post scheduled for ${new Date(scheduleDate).toLocaleString()}`);
-    onClose();
+  const handleSchedule = async () => {
+    try {
+      const payload = {
+        title: threads[0].content.slice(0, 40),
+        content: threads[0].content,
+        rawThreads: threads,
+        platforms: selectedPlatforms,
+        status: "SCHEDULED",
+        scheduledAt: scheduleDate,
+      };
+
+      let res;
+      if (initialPost?.id) {
+        res = await fetch(`/api/posts/${initialPost.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch("/api/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (res.ok) {
+        toast.success(`Post scheduled for ${new Date(scheduleDate).toLocaleString()}`);
+        setScheduleModalOpen(false);
+        onSavePost?.(payload);
+        onClose();
+      }
+    } catch (err) {
+      toast.error("Error scheduling post");
+    }
   };
 
   // Preview data object

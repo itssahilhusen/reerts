@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Sparkles, Rss, Plus, Flame, Lightbulb, ArrowRight, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -12,58 +12,40 @@ interface IdeasViewProps {
 export function IdeasView({ onOpenComposer }: IdeasViewProps) {
   const [topicInput, setTopicInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [ideas, setIdeas] = useState([
-    {
-      id: "1",
-      title: "Why consistency on 1 platform is obsolete in 2026",
-      source: "X Viral Feeds",
-      score: "98% Virality",
-      tags: ["Strategy", "Multi-Platform"],
-    },
-    {
-      id: "2",
-      title: "How I turn 1 technical commit into a LinkedIn carousel and a Twitter breakdown",
-      source: "Reddit r/webdev",
-      score: "94% Virality",
-      tags: ["Repurposing", "Developer"],
-    },
-    {
-      id: "3",
-      title: "Stop posting at random times: the real data behind dwell-time algorithms",
-      source: "RSS Feed",
-      score: "91% Virality",
-      tags: ["Analytics", "Growth"],
-    },
-    {
-      id: "4",
-      title: "The feedback loop playbook: how to make past winners generate future winners",
-      source: "AI Idea Engine",
-      score: "96% Virality",
-      tags: ["AI", "Feedback Loop"],
-    },
-  ]);
+  const [ideas, setIdeas] = useState<any[]>([]);
 
-  const handleGenerate = () => {
+  useEffect(() => {
+    fetch("/api/ideas")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ideas) setIdeas(data.ideas);
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  const handleGenerate = async () => {
     if (!topicInput.trim()) {
       toast.error("Please enter a topic or keyword");
       return;
     }
     setIsGenerating(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/ideas/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: topicInput }),
+      });
+      const data = await res.json();
+      if (data.ideas && data.ideas.length > 0) {
+        setIdeas([...data.ideas, ...ideas]);
+        setTopicInput("");
+        toast.success("Generated new viral ideas from topic!");
+      }
+    } catch (err) {
+      toast.error("Failed to generate ideas");
+    } finally {
       setIsGenerating(false);
-      setIdeas([
-        {
-          id: Date.now().toString(),
-          title: `How to dominate ${topicInput} with automated content distribution`,
-          source: "Custom AI Generation",
-          score: "99% Virality",
-          tags: [topicInput, "Automation"],
-        },
-        ...ideas,
-      ]);
-      setTopicInput("");
-      toast.success("Generated new viral ideas from topic!");
-    }, 1000);
+    }
   };
 
   return (
@@ -119,7 +101,7 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
               </div>
               <h3 className="font-semibold text-sm text-foreground leading-snug">{item.title}</h3>
               <div className="flex flex-wrap gap-1">
-                {item.tags.map((t) => (
+                {item.tags?.map((t: string) => (
                   <span key={t} className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-medium text-primary">
                     {t}
                   </span>
