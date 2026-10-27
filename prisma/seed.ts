@@ -101,7 +101,7 @@ async function main() {
     },
     {
       title: "Behind the scenes of building Reerts in public",
-      content: "Here is the exact tech stack we used to achieve 100% UI fidelity in record time with Next.js 14, Tailwind, Prisma SQLite, and autonomous agents.",
+      content: "Here is the exact tech stack we used to achieve 100% UI fidelity in record time with Next.js 14, Tailwind, PostgreSQL, Prisma, and autonomous agents.",
       platforms: JSON.stringify(["x", "linkedin"]),
       status: "DRAFT",
       impressions: 0,
