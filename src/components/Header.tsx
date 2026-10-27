@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, Languages, Sun, Moon, Menu, X, ArrowRight, Sparkles, BookOpen, Wrench } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { ChevronDown, Languages, Sun, Moon, Menu, X, ArrowRight, Sparkles, BookOpen, Wrench, User } from "lucide-react";
 import { ReertsLogo } from "@/components/ReertsLogo";
 
 interface HeaderProps {
@@ -14,6 +15,7 @@ interface HeaderProps {
 }
 
 export function Header({ onOpenTrial, isDark, onToggleTheme, onLogout }: HeaderProps) {
+  const { data: session, status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -195,21 +197,42 @@ export function Header({ onOpenTrial, isDark, onToggleTheme, onLogout }: HeaderP
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={onLogout}
-            className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
-          >
-            Log out
-          </button>
+          {status === "authenticated" && session?.user ? (
+            <>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-3.5 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
+              >
+                Log out
+              </button>
 
-          <Link
-            href="/studio"
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
-          >
-            Open Reerts
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+              <Link
+                href="/studio"
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+              >
+                <span>Studio</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
+              >
+                Log in
+              </Link>
+
+              <Link
+                href="/signup"
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+              >
+                <span>Get Started</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile menu toggle */}
@@ -279,24 +302,46 @@ export function Header({ onOpenTrial, isDark, onToggleTheme, onLogout }: HeaderP
             </Link>
 
             <div className="pt-4 border-t border-border flex flex-col gap-3">
-              <Link
-                href="/studio"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
-              >
-                Open Reerts
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onLogout?.();
-                }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-card py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
-              >
-                Log out
-              </button>
+              {status === "authenticated" && session?.user ? (
+                <>
+                  <Link
+                    href="/studio"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                  >
+                    Studio
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      signOut({ callbackUrl: "/login" });
+                    }}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-card py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
+                  >
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/signup"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                  >
+                    Get Started Free
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-card py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors shadow-xs"
+                  >
+                    Log in
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

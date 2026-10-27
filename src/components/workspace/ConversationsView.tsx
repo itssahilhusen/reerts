@@ -17,7 +17,13 @@ import {
   Share2,
   RotateCw,
   Archive,
-  Star
+  Star,
+  AtSign,
+  LayoutGrid,
+  Table as TableIcon,
+  Info,
+  Check,
+  ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -167,9 +173,60 @@ const INITIAL_CONVERSATIONS: ConversationThread[] = [
   },
 ];
 
+const DUMMY_POSTS = [
+  {
+    id: "post-4",
+    author: "my_dummy_4",
+    avatarBg: "bg-rose-500",
+    content: "This week's highlights recap! 1/3",
+    stat: "0/2...",
+  },
+  {
+    id: "post-1",
+    author: "my_dummy_1",
+    avatarBg: "bg-indigo-600",
+    content: "Started a new project! Your support would mean a lot. 🚀 #project #launch",
+    stat: "0/3...",
+  },
+  {
+    id: "post-2",
+    author: "my_dummy_2",
+    avatarBg: "bg-amber-600",
+    content: "Working from a cafe today ☕ The focus here is amazing!",
+    stat: "0/1...",
+  },
+  {
+    id: "post-3",
+    author: "my_dummy_3",
+    avatarBg: "bg-emerald-600",
+    content: "Here's a demo of our new feature. What do you think?",
+    stat: "",
+  },
+];
+
+const DUMMY_COMMENTS = [
+  {
+    id: "comm-1",
+    author: "seoul_techie",
+    time: "2 days ago",
+    avatarBg: "bg-amber-700",
+    text: "This is a great point. Can you elaborate more?",
+  },
+  {
+    id: "comm-2",
+    author: "digital_nomad",
+    time: "2 days ago",
+    avatarBg: "bg-blue-600",
+    text: "Thanks for bringing this up. Very insightful.",
+  },
+];
+
 export function ConversationsView() {
   const [conversations, setConversations] = useState<ConversationThread[]>(INITIAL_CONVERSATIONS);
   const [activeId, setActiveId] = useState<string>("conv-1");
+  const [activeSubTab, setActiveSubTab] = useState<"comments" | "mentions" | "by_post" | "table">("comments");
+  const [commentsOnly, setCommentsOnly] = useState(true);
+  const [selectedPostId, setSelectedPostId] = useState("post-1");
   const [filterPlatform, setFilterPlatform] = useState<"all" | "threads" | "instagram" | "x">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [replyText, setReplyText] = useState("");
@@ -284,6 +341,76 @@ export function ConversationsView() {
             <CheckCircle2 className="size-3.5 text-muted-foreground" />
             <span>Mark all read</span>
           </button>
+        </div>
+      </div>
+
+      {/* Posteady Sub-Tabs Row: Comments, @ Mentions, By post, Table + Connected Accounts */}
+      <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-4 shrink-0 select-none">
+        <div className="flex items-center gap-5 text-sm">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("comments")}
+            className={cn(
+              "flex items-center gap-1.5 font-semibold transition-colors pb-1 cursor-pointer",
+              activeSubTab === "comments"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <MessageSquare className="size-4" />
+            <span>Comments</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("mentions")}
+            className={cn(
+              "flex items-center gap-1.5 font-semibold transition-colors pb-1 cursor-pointer",
+              activeSubTab === "mentions"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <AtSign className="size-4" />
+            <span>@ Mentions</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("by_post")}
+            className={cn(
+              "flex items-center gap-1.5 font-semibold transition-colors pb-1 cursor-pointer",
+              activeSubTab === "by_post"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <LayoutGrid className="size-4" />
+            <span>By post</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("table")}
+            className={cn(
+              "flex items-center gap-1.5 font-semibold transition-colors pb-1 cursor-pointer",
+              activeSubTab === "table"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <TableIcon className="size-4" />
+            <span>Table</span>
+          </button>
+        </div>
+
+        {/* Connected social accounts cluster matching screenshot */}
+        <div className="flex items-center gap-2">
+          <Check className="size-3.5 text-muted-foreground" />
+          <div className="flex items-center -space-x-1.5">
+            <span className="size-5 rounded-full border border-background bg-zinc-900 text-[9px] text-white font-bold flex items-center justify-center">X</span>
+            <span className="size-5 rounded-full border border-background bg-gradient-to-tr from-amber-500 to-rose-500 text-[8px] text-white font-bold flex items-center justify-center">IG</span>
+            <span className="size-5 rounded-full border border-background bg-blue-600 text-[8px] text-white font-bold flex items-center justify-center">in</span>
+            <span className="size-5 rounded-full border border-background bg-black text-[8px] text-white font-bold flex items-center justify-center">@</span>
+            <span className="size-5 rounded-full border border-background bg-rose-600 text-[8px] text-white font-bold flex items-center justify-center">TT</span>
+          </div>
         </div>
       </div>
 

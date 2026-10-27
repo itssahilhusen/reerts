@@ -13,6 +13,7 @@ scratch
 *.dump
 *.cache.json
 prisma/*_cache.json
+src/lib/users-store.json
 
 # OS & Editor Files
 .DS_Store

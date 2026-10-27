@@ -37,6 +37,7 @@ model User {
   workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   name          String?
   email         String?    @unique
+  password      String?
   role          String     @default("OWNER") // OWNER, ADMIN, MEMBER, CLIENT
   image         String?
   createdAt     DateTime   @default(now())

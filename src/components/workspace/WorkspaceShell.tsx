@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { 
   Menu, 
   X, 
@@ -38,7 +39,8 @@ import {
   User,
   CreditCard,
   Languages,
-  Rss
+  Rss,
+  LogIn
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StudioView } from "./StudioView";
@@ -55,6 +57,7 @@ import { MediaLibraryView } from "./MediaLibraryView";
 import { ConversationsView } from "./ConversationsView";
 import { ComposerSheet } from "./ComposerSheet";
 import { ReertsLogo } from "@/components/ReertsLogo";
+import { AuthForm } from "@/components/auth/AuthForm";
 import { toast } from "sonner";
 
 export type WorkspaceTab = 
@@ -78,6 +81,9 @@ export type WorkspaceTab =
 
 interface WorkspaceShellProps {
   initialView?: WorkspaceTab;
+  children?: React.ReactNode;
+  showAuthModal?: boolean;
+  authModalMode?: "signin" | "signup";
 }
 
 interface NavItem {
@@ -114,11 +120,17 @@ export const TAB_ROUTES: Record<WorkspaceTab, string> = {
   support: "/support",
 };
 
-export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) {
+export function WorkspaceShell({ 
+  initialView = "studio",
+  children,
+  showAuthModal = false,
+  authModalMode: initialAuthModalMode = "signup",
+}: WorkspaceShellProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   const getTabFromPath = (path: string): WorkspaceTab => {
+    if (path.startsWith("/login") || path.startsWith("/signup")) return initialView;
     if (path.startsWith("/ideas")) return "ideas";
     if (path.startsWith("/personas")) return "personas";
     if (path.startsWith("/calendar")) return "calendar";
@@ -140,8 +152,12 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
   };
 
   const activeTab = getTabFromPath(pathname || "") || initialView;
+  const { data: session, status } = useSession();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(showAuthModal || false);
+  const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">(initialAuthModalMode);
   const [composerPost, setComposerPost] = useState<any>(null);
   const [isDark, setIsDark] = useState(true);
 
@@ -431,24 +447,101 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
           </div>
         )}
 
-        {/* Sidebar Footer User Profile Card matching screenshot */}
-        <div className="p-2 border-t border-border/60">
-          <div className="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="size-8 rounded-full overflow-hidden bg-primary/10 border border-border shrink-0">
-                <Image src="/images/testimonials/oliviandtilly.jpg" alt="Sahil Shaikh" width={32} height={32} className="size-8 object-cover rounded-full" />
+        {/* Sidebar Footer: Start for free button or User profile */}
+        <div className="p-2 border-t border-border/60 relative">
+          {!session?.user ? (
+            <button
+              id="sidebar-start-for-free"
+              type="button"
+              onClick={() => {
+                setAuthModalMode("signup");
+                setIsAuthModalOpen(true);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white font-medium text-xs py-2.5 px-3 transition-all shadow-md cursor-pointer group select-none",
+                isSidebarCollapsed && "px-0 justify-center"
+              )}
+              title="Start for free"
+            >
+              <LogIn className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+              {!isSidebarCollapsed && <span className="font-semibold">Start for free</span>}
+            </button>
+          ) : (
+            <>
+              <div 
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="size-8 rounded-full overflow-hidden bg-primary/10 border border-border shrink-0 flex items-center justify-center">
+                    {session?.user?.image ? (
+                      <Image 
+                        src={session.user.image} 
+                        alt={session.user.name || "User"} 
+                        width={32} 
+                        height={32} 
+                        className="size-8 object-cover rounded-full" 
+                        unoptimized 
+                      />
+                    ) : (
+                      <div className="size-full bg-gradient-to-br from-neutral-800 to-neutral-950 text-white font-bold text-xs flex items-center justify-center">
+                        {(session?.user?.name || "U")[0].toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  {!isSidebarCollapsed && (
+                    <div className="flex-1 min-w-0 leading-tight">
+                      <span className="font-semibold text-xs text-foreground block truncate">
+                        {session?.user?.name || "Alex Rivers"}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground block truncate">
+                        {session?.user?.email || "alex@posteady.com"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {!isSidebarCollapsed && (
+                  <MoreVertical className="size-4 text-muted-foreground shrink-0" />
+                )}
               </div>
-              {!isSidebarCollapsed && (
-                <div className="flex-1 min-w-0 leading-tight">
-                  <span className="font-semibold text-xs text-foreground block truncate">Sahil Shaikh</span>
-                  <span className="text-[11px] text-muted-foreground block truncate">itsmesahil3573@gmail.com</span>
+
+              {/* User Profile Popup Menu */}
+              {isUserMenuOpen && (
+                <div className="absolute bottom-full left-2 right-2 mb-2 rounded-xl border border-border bg-card p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-2.5 py-2 border-b border-border/60 mb-1">
+                    <span className="text-xs font-semibold text-foreground block truncate">{session?.user?.name || "Alex Rivers"}</span>
+                    <span className="text-[11px] text-muted-foreground block truncate">{session?.user?.email || "alex@posteady.com"}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthModalMode("signin");
+                      setIsAuthModalOpen(true);
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors text-left cursor-pointer"
+                  >
+                    <User className="size-3.5 text-muted-foreground" />
+                    <span>Switch account</span>
+                  </button>
+                  <Link
+                    href="/accounts"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                  >
+                    <span>Connected Accounts</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
+                  >
+                    <span>Log out</span>
+                  </button>
                 </div>
               )}
-            </div>
-            {!isSidebarCollapsed && (
-              <MoreVertical className="size-4 text-muted-foreground shrink-0" />
-            )}
-          </div>
+            </>
+          )}
         </div>
       </aside>
 
@@ -573,6 +666,36 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
         onClose={() => setIsComposerOpen(false)}
         initialPost={composerPost}
       />
+
+      {/* 4. Auth Modal overlay */}
+      {isAuthModalOpen && (
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsAuthModalOpen(false);
+              if (pathname === "/login" || pathname === "/signup") {
+                router.push("/conversations");
+              }
+            }
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-xs animate-in fade-in duration-200 cursor-pointer"
+        >
+          <div className="cursor-default w-full max-w-[420px] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <AuthForm
+              initialMode={authModalMode}
+              onClose={() => {
+                setIsAuthModalOpen(false);
+                if (pathname === "/login" || pathname === "/signup") {
+                  router.push("/conversations");
+                }
+              }}
+              isModal={true}
+            />
+          </div>
+        </div>
+      )}
+
+      {children}
     </div>
   );
 }
