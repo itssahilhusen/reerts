@@ -96,7 +96,10 @@ export function WorkspaceShell({ initialView = "studio" }: WorkspaceShellProps) 
   const [isDark, setIsDark] = useState(true);
 
   // Sync theme - default to dark unless explicitly saved as light
-  useEffect(() => {
+  const useIsomorphicLayoutEffect =
+    typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+
+  useIsomorphicLayoutEffect(() => {
     const saved = localStorage.getItem("reerts-theme");
     if (saved === "light") {
       setIsDark(false);

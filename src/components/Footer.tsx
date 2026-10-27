@@ -1,13 +1,12 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { TrendingUp, Sun, Moon, Languages } from "lucide-react";
-import { ReertsLogo } from "@/components/ReertsLogo";
 
 interface FooterProps {
-  isDark: boolean;
-  onToggleTheme: () => void;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
 }
 
 export function Footer({ isDark, onToggleTheme }: FooterProps) {
@@ -55,66 +54,38 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
   ];
 
   return (
-    <footer
-      className="w-full pt-14 pb-8 px-6 md:px-12 lg:px-16 transition-colors"
-      style={{ backgroundColor: "var(--primary)" }}
-    >
+    <footer className="w-full pt-14 pb-8 px-6 md:px-12 lg:px-16 transition-colors border-t bg-[#141414] text-white border-white/10 dark:bg-white dark:text-[#0a0a0a] dark:border-[#e5e5e5]">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row gap-12 lg:gap-8">
           {/* Brand info */}
           <div className="flex flex-col gap-4 shrink-0 lg:w-[240px]">
             <Link href="/" className="flex items-center">
-              <ReertsLogo forceDarkBackground={true} variant="full" iconClassName="h-8 sm:h-9 w-auto object-contain" />
+              {/* When in Light Mode: Footer is Black -> White Logo */}
+              <Image
+                src="/images/logos/header.black.logo.svg"
+                alt="reerts"
+                width={136}
+                height={40}
+                className="h-8 sm:h-9 w-auto object-contain dark:hidden"
+                priority
+              />
+              {/* When in Dark Mode: Footer is White -> Black Logo */}
+              <Image
+                src="/images/logos/header.white.logo.svg"
+                alt="reerts"
+                width={136}
+                height={40}
+                className="hidden dark:block h-8 sm:h-9 w-auto object-contain"
+                priority
+              />
             </Link>
-
-            <p
-              className="text-sm whitespace-pre-line leading-relaxed"
-              style={{
-                color: "color-mix(in srgb, var(--primary-foreground) 70%, transparent)",
-              }}
-            >
-              <span className="inline-flex items-center gap-1 font-medium text-primary-foreground">
-                Post Steady, Grow Steady
-                <TrendingUp className="size-4" />
-              </span>
-            </p>
-
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all"
-                style={{
-                  backgroundColor: "color-mix(in srgb, var(--primary-foreground) 12%, transparent)",
-                  color: "var(--primary-foreground)",
-                }}
-              >
-                {isDark ? <Sun className="h-3.5 w-3.5 text-amber-300" /> : <Moon className="h-3.5 w-3.5" />}
-                <span>{isDark ? "Dark" : "Light"}</span>
-              </button>
-
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all"
-                style={{
-                  backgroundColor: "color-mix(in srgb, var(--primary-foreground) 12%, transparent)",
-                  color: "var(--primary-foreground)",
-                }}
-              >
-                <Languages className="h-3.5 w-3.5" />
-                <span>EN</span>
-              </button>
-            </div>
           </div>
 
           {/* 5 Footer Navigation Columns */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-10 flex-1">
             {/* Column 1: Product */}
             <div className="flex flex-col gap-4">
-              <h3
-                className="text-sm font-semibold tracking-wide"
-                style={{ color: "var(--primary-foreground)" }}
-              >
+              <h3 className="text-sm font-semibold tracking-wide text-white dark:text-[#0a0a0a]">
                 Product
               </h3>
               <ul className="flex flex-col gap-2.5">
@@ -122,11 +93,7 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
                   <li key={idx}>
                     <a
                       href={item.href}
-                      className="text-sm hover:underline transition-colors"
-                      style={{
-                        color:
-                          "color-mix(in srgb, var(--primary-foreground) 75%, transparent)",
-                      }}
+                      className="text-sm text-white/70 hover:text-white dark:text-[#737373] dark:hover:text-[#0a0a0a] hover:underline transition-colors"
                     >
                       {item.label}
                     </a>
@@ -137,10 +104,7 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
 
             {/* Column 2: Features */}
             <div className="flex flex-col gap-4">
-              <h3
-                className="text-sm font-semibold tracking-wide"
-                style={{ color: "var(--primary-foreground)" }}
-              >
+              <h3 className="text-sm font-semibold tracking-wide text-white dark:text-[#0a0a0a]">
                 Features
               </h3>
               <ul className="flex flex-col gap-2.5">
@@ -148,11 +112,7 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
                   <li key={idx}>
                     <a
                       href={item.href}
-                      className="text-sm hover:underline transition-colors"
-                      style={{
-                        color:
-                          "color-mix(in srgb, var(--primary-foreground) 75%, transparent)",
-                      }}
+                      className="text-sm text-white/70 hover:text-white dark:text-[#737373] dark:hover:text-[#0a0a0a] hover:underline transition-colors"
                     >
                       {item.label}
                     </a>
@@ -163,10 +123,7 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
 
             {/* Column 3: Free Tools */}
             <div className="flex flex-col gap-4">
-              <h3
-                className="text-sm font-semibold tracking-wide"
-                style={{ color: "var(--primary-foreground)" }}
-              >
+              <h3 className="text-sm font-semibold tracking-wide text-white dark:text-[#0a0a0a]">
                 Free Tools
               </h3>
               <ul className="flex flex-col gap-2.5">
@@ -174,11 +131,7 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
                   <li key={idx}>
                     <a
                       href={item.href}
-                      className="text-sm hover:underline transition-colors"
-                      style={{
-                        color:
-                          "color-mix(in srgb, var(--primary-foreground) 75%, transparent)",
-                      }}
+                      className="text-sm text-white/70 hover:text-white dark:text-[#737373] dark:hover:text-[#0a0a0a] hover:underline transition-colors"
                     >
                       {item.label}
                     </a>
@@ -189,10 +142,7 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
 
             {/* Column 4: Resources */}
             <div className="flex flex-col gap-4">
-              <h3
-                className="text-sm font-semibold tracking-wide"
-                style={{ color: "var(--primary-foreground)" }}
-              >
+              <h3 className="text-sm font-semibold tracking-wide text-white dark:text-[#0a0a0a]">
                 Resources
               </h3>
               <ul className="flex flex-col gap-2.5">
@@ -200,11 +150,7 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
                   <li key={idx}>
                     <a
                       href={item.href}
-                      className="text-sm hover:underline transition-colors"
-                      style={{
-                        color:
-                          "color-mix(in srgb, var(--primary-foreground) 75%, transparent)",
-                      }}
+                      className="text-sm text-white/70 hover:text-white dark:text-[#737373] dark:hover:text-[#0a0a0a] hover:underline transition-colors"
                     >
                       {item.label}
                     </a>
@@ -215,10 +161,7 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
 
             {/* Column 5: Legal */}
             <div className="flex flex-col gap-4">
-              <h3
-                className="text-sm font-semibold tracking-wide"
-                style={{ color: "var(--primary-foreground)" }}
-              >
+              <h3 className="text-sm font-semibold tracking-wide text-white dark:text-[#0a0a0a]">
                 Legal
               </h3>
               <ul className="flex flex-col gap-2.5">
@@ -226,11 +169,7 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
                   <li key={idx}>
                     <a
                       href={item.href}
-                      className="text-sm hover:underline transition-colors"
-                      style={{
-                        color:
-                          "color-mix(in srgb, var(--primary-foreground) 75%, transparent)",
-                      }}
+                      className="text-sm text-white/70 hover:text-white dark:text-[#737373] dark:hover:text-[#0a0a0a] hover:underline transition-colors"
                     >
                       {item.label}
                     </a>
@@ -242,20 +181,8 @@ export function Footer({ isDark, onToggleTheme }: FooterProps) {
         </div>
 
         {/* Bottom copyright row */}
-        <div
-          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-12 pt-8 border-t"
-          style={{
-            borderColor:
-              "color-mix(in srgb, var(--primary-foreground) 15%, transparent)",
-          }}
-        >
-          <p
-            className="text-sm"
-            style={{
-              color:
-                "color-mix(in srgb, var(--primary-foreground) 60%, transparent)",
-            }}
-          >
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-12 pt-8 border-t border-white/10 dark:border-[#e5e5e5]">
+          <p className="text-sm text-white/60 dark:text-[#737373]">
             © {new Date().getFullYear()} reerts, Inc. All rights reserved.
           </p>
         </div>

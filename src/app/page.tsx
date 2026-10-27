@@ -21,7 +21,10 @@ export default function Home() {
   const [trialOpen, setTrialOpen] = useState(false);
   const [trialPlan, setTrialPlan] = useState("Pro");
 
-  useEffect(() => {
+  const useIsomorphicLayoutEffect =
+    typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+
+  useIsomorphicLayoutEffect(() => {
     // Check saved theme: default to dark unless explicitly set to light
     const saved = localStorage.getItem("reerts-theme");
     if (saved === "light") {

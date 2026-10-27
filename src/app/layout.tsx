@@ -40,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark scroll-smooth font-sans" suppressHydrationWarning>
+    <html lang="en" className="scroll-smooth font-sans" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -50,6 +50,11 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased selection:bg-primary selection:text-primary-foreground min-h-screen">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("reerts-theme");if(t==="light"){document.documentElement.classList.remove("dark");}else{document.documentElement.classList.add("dark");}}catch(e){}})();`,
+          }}
+        />
         {children}
       </body>
     </html>
