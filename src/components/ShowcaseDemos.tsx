@@ -1850,8 +1850,8 @@ function RowClientConnect({ isWhiteUI }: { isWhiteUI: boolean }) {
 // MAIN EXPORT
 // =========================================================================
 
-export function ShowcaseDemos({ isDark = true }: { isDark?: boolean }) {
-  const isWhiteUI = isDark;
+export function ShowcaseDemos({ isDark = false }: { isDark?: boolean }) {
+  const isWhiteUI = !isDark;
 
   return (
     <section id="showcase-demos" className="border-t border-border py-20 bg-background transition-colors">

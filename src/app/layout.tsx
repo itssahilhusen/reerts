@@ -54,7 +54,7 @@ export default function RootLayout({
       <body className="font-sans antialiased selection:bg-primary selection:text-primary-foreground min-h-screen">
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("reerts-theme");if(t==="light"){document.documentElement.classList.remove("dark");}else{document.documentElement.classList.add("dark");}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("reerts-theme");if(t==="dark"){document.documentElement.classList.add("dark");}else{document.documentElement.classList.remove("dark");}}catch(e){}})();`,
           }}
         />
         <AuthProvider>{children}</AuthProvider>

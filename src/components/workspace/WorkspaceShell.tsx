@@ -159,20 +159,20 @@ export function WorkspaceShell({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(showAuthModal || false);
   const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">(initialAuthModalMode);
   const [composerPost, setComposerPost] = useState<any>(null);
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
 
-  // Sync theme - default to dark unless explicitly saved as light
+  // Sync theme - default to light unless explicitly saved as dark
   const useIsomorphicLayoutEffect =
     typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
   useIsomorphicLayoutEffect(() => {
     const saved = localStorage.getItem("reerts-theme");
-    if (saved === "light") {
-      setIsDark(false);
-      document.documentElement.classList.remove("dark");
-    } else {
+    if (saved === "dark") {
       setIsDark(true);
       document.documentElement.classList.add("dark");
+    } else {
+      setIsDark(false);
+      document.documentElement.classList.remove("dark");
     }
   }, []);
 
@@ -699,3 +699,4 @@ export function WorkspaceShell({
     </div>
   );
 }
+

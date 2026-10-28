@@ -17,7 +17,7 @@ import { Footer } from "@/components/Footer";
 import { TrialModal } from "@/components/TrialModal";
 
 export default function Home() {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
   const [trialPlan, setTrialPlan] = useState("Pro");
 
@@ -27,12 +27,12 @@ export default function Home() {
   useIsomorphicLayoutEffect(() => {
     // Check saved theme: default to dark unless explicitly set to light
     const saved = localStorage.getItem("reerts-theme");
-    if (saved === "light") {
-      setIsDark(false);
-      document.documentElement.classList.remove("dark");
-    } else {
+    if (saved === "dark") {
       setIsDark(true);
       document.documentElement.classList.add("dark");
+    } else {
+      setIsDark(false);
+      document.documentElement.classList.remove("dark");
     }
   }, []);
 

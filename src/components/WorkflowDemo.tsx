@@ -311,14 +311,14 @@ function DemoCursor({
 // ==========================================
 // MAIN COMPONENT: WORKFLOW DEMO
 // ==========================================
-export function WorkflowDemo({ isDark = true }: { isDark?: boolean }) {
+export function WorkflowDemo({ isDark = false }: { isDark?: boolean }) {
   const [activeStep, setActiveStep] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
   // Inverted Demo Theme Class:
   // When main website is black/dark: the demo window is crisp white ("theme-light")!
   // When main website is white/light: the demo window is sleek black ("dark")!
-  const demoThemeClass = isDark ? "theme-light" : "dark";
+  const demoThemeClass = isDark ? "dark" : "theme-light";
 
   // Auto rotation across 5 steps
   useEffect(() => {
