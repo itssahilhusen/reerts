@@ -53,15 +53,73 @@ export interface IdeaRecord {
   updatedAt: string;
 }
 
+export type CarouselSlideType =
+  | "cover"
+  | "body"
+  | "stat"
+  | "steps"
+  | "keypoints"
+  | "compare"
+  | "timeline"
+  | "statement"
+  | "quote"
+  | "cta"
+  | "COVER"
+  | "PROBLEM"
+  | "CONTENT"
+  | "COMPARISON"
+  | "CLOSING";
+
+export interface CarouselSlideStep {
+  title: string;
+  description?: string;
+}
+
+export interface CarouselSlideChartBar {
+  label: string;
+  value: string;
+  ratio?: number;
+}
+
+export interface CarouselSlideOverrides {
+  titleScale?: number;
+  bodyScale?: number;
+  align?: "left" | "center";
+  verticalAlign?: "top" | "center" | "bottom";
+  paddingScale?: number;
+  fontFamily?: string;
+  decoration?: "none" | "frame" | "band" | "circle";
+  coverStyle?: "plain" | "accent";
+  imageFocus?: { x: number; y: number };
+  imageOpacity?: number;
+}
+
 export interface CarouselSlideItem {
   id: string;
   order: number;
-  slideType: "COVER" | "PROBLEM" | "CONTENT" | "COMPARISON" | "CLOSING";
-  headline: string;
-  body: string;
+  slideType: CarouselSlideType;
+  headline?: string;
+  title?: string;
+  body?: string;
+  subtitle?: string;
   tag?: string;
+  kicker?: string;
+  bullets?: string[];
+  statValue?: string;
+  statLabel?: string;
+  statDescription?: string;
+  chart?: {
+    type: "bars";
+    bars: CarouselSlideChartBar[];
+  };
+  steps?: CarouselSlideStep[];
+  quote?: string;
+  attribution?: string;
+  ctaTitle?: string;
+  ctaBody?: string;
   bgGradient?: string;
   imageUrl?: string;
+  overrides?: CarouselSlideOverrides;
 }
 
 export interface CarouselRecord {
@@ -69,8 +127,11 @@ export interface CarouselRecord {
   workspaceId: string;
   title: string;
   theme: "dark" | "gradient" | "minimal" | "light";
+  primaryColor?: string;
+  footer?: string;
+  caption?: string;
   sourceUrl?: string | null;
-  aspectRatio: "4:5" | "1:1";
+  aspectRatio: "1:1" | "3:4" | "4:5" | "9:16" | "16:9";
   slides: CarouselSlideItem[];
   createdAt: string;
   updatedAt: string;

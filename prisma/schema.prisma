@@ -37,6 +37,7 @@ model User {
   workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   name          String?
   email         String?    @unique
+  emailVerified DateTime?
   password      String?
   role          String     @default("OWNER") // OWNER, ADMIN, MEMBER, CLIENT
   image         String?
@@ -53,12 +54,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 

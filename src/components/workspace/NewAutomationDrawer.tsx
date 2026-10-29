@@ -23,11 +23,11 @@ import { AutomationItem } from "./AutoDmView";
 
 // Tone background classes
 const tones = {
-  green: "bg-tone-green",
-  yellow: "bg-tone-yellow",
-  blue: "bg-tone-blue",
-  red: "bg-red-50 dark:bg-red-950/30",
-  neutral: "bg-muted/80",
+  green: "bg-[#edf7f1] dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-foreground",
+  yellow: "bg-[#fef9ee] dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-foreground",
+  blue: "bg-[#eef5fc] dark:bg-sky-950/40 border-sky-300 dark:border-sky-800 text-foreground",
+  red: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50",
+  neutral: "bg-muted/80 border-border",
 };
 
 interface ChoiceBoxProps {
@@ -65,8 +65,8 @@ function ChoiceBox({
       disabled={disabled}
       onClick={() => onSelect(value)}
       className={cn(
-        "flex w-full items-center gap-2.5 rounded-xl border p-3 text-left text-xs sm:text-sm font-semibold transition-all outline-none select-none",
-        !isSelected && "bg-card text-foreground/80 border-border/80 hover:bg-muted/50",
+        "flex w-full items-center gap-2.5 rounded-xl border p-3 text-left text-xs sm:text-[13px] font-semibold transition-all outline-none select-none",
+        !isSelected && "bg-white dark:bg-card text-foreground/80 border-border/80 hover:bg-muted/50",
         isSelected && cn(toneBg, "border-foreground/30 text-foreground shadow-2xs"),
         connected && isSelected && "relative z-10 -mb-[9px] rounded-b-none border-b-0 pb-[19px]",
         disabled && "opacity-50 cursor-not-allowed pointer-events-none",
@@ -80,14 +80,14 @@ function ChoiceBox({
           "flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors shadow-2xs",
           isSelected
             ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-            : "border-border bg-background"
+            : "border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-800"
         )}
       >
         {isSelected && <Check className="size-3 stroke-[3]" />}
       </span>
 
       {icon}
-      <span className="truncate">{label}</span>
+      <span className="leading-snug break-words flex-1">{label}</span>
     </button>
   );
 }
@@ -163,15 +163,15 @@ export function NewAutomationDrawer({
   onClose,
   onSave,
   initialData,
-  accountHandle = "theaiseed",
+  accountHandle = "sahil_357_",
 }: NewAutomationDrawerProps) {
-  // Trigger state (null initially, or "comment" / "dm")
-  const [triggerType, setTriggerType] = useState<"comment" | "dm" | null>(null);
+  // Trigger state (defaults to "comment" matching screenshot 1)
+  const [triggerType, setTriggerType] = useState<"comment" | "dm">("comment");
 
-  // Progressive Disclosure: unlockedStep 1 = Target Post, 2 = Keywords, 3 = Actions, 4 = They will get, 5 = Final DM / Go Live
+  // Progressive Disclosure step
   const [unlockedStep, setUnlockedStep] = useState<number>(1);
 
-  // Step 1: Target post state
+  // Step 1: Target post state (defaults to "any" matching screenshot 1)
   const [targetPost, setTargetPost] = useState<"any" | "specific">("any");
   const [selectedPostId, setSelectedPostId] = useState<string>("post-1");
   const [isPostPickerOpen, setIsPostPickerOpen] = useState(false);
@@ -187,8 +187,8 @@ export function NewAutomationDrawer({
   // Comment public reply variants
   const [replyToggle, setReplyToggle] = useState(false);
   const [replyVariants, setReplyVariants] = useState<string[]>([
-    "xddfd{{username}}",
-    "Reply 2",
+    "pls check DM!{{username}}",
+    "Sent you the details! Check your DMs 📩",
   ]);
 
   // Advanced priority
@@ -197,8 +197,8 @@ export function NewAutomationDrawer({
 
   // Step 4: "They will get"
   const [openingDm, setOpeningDm] = useState(true);
-  const [openingText, setOpeningText] = useState("gfds");
-  const [openingButtonLabel, setOpeningButtonLabel] = useState("gfds");
+  const [openingText, setOpeningText] = useState("Hey! Tap below to get your free link 👇");
+  const [openingButtonLabel, setOpeningButtonLabel] = useState("Get the link");
   const [showOpeningWhy, setShowOpeningWhy] = useState(false);
 
   // Follow request gate
@@ -217,12 +217,12 @@ export function NewAutomationDrawer({
   const [emailConsent, setEmailConsent] = useState(false);
 
   // Step 5: Final DM ("And then, they will get")
-  const [finalDm, setFinalDm] = useState("gfdsgf");
+  const [finalDm, setFinalDm] = useState("Here is your requested guide and instant link!");
   const [links, setLinks] = useState<{ label: string; url: string }[]>([
     { label: "Get the link", url: "https://posteady.com" },
   ]);
 
-  // DM-only trigger state (when "When a DM arrives" is selected)
+  // DM-only trigger state
   const [dmReplyText, setDmReplyText] = useState("Hello {{username}}! Thanks for messaging us. How can we help?");
 
   // UI state
@@ -230,7 +230,7 @@ export function NewAutomationDrawer({
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(true);
   const [previewTab, setPreviewTab] = useState<"post" | "comments" | "dm">("post");
-  const [liveTime, setLiveTime] = useState("13:35");
+  const [liveTime, setLiveTime] = useState("11:11");
 
   const formScrollRef = useRef<HTMLDivElement>(null);
 
@@ -247,53 +247,32 @@ export function NewAutomationDrawer({
     return () => clearInterval(timer);
   }, []);
 
-  // Reset or initialize when opened
+  // Initialize data if editing
   useEffect(() => {
     if (initialData) {
-      setTriggerType(initialData.triggerType === "dm" ? "dm" : "comment");
-      setFinalDm(initialData.dmContent || "pls check DM!{{username}}");
-      setKeywords(initialData.keywords || "Price, Link, Shop");
-      setKeywordsType(initialData.keywords === "All DMs" ? "any" : "specific");
+      setTriggerType(initialData.triggerType || "comment");
+      setActionType(initialData.actionType === "Reply" ? "reply" : "dm");
+      setTargetPost(initialData.targetPost === "—" || !initialData.targetPost ? "any" : "specific");
+      if (initialData.keywords === "All DMs" || initialData.keywords === "Any word" || !initialData.keywords) {
+        setKeywordsType("any");
+      } else {
+        setKeywordsType("specific");
+        setKeywords(initialData.keywords);
+      }
+      setFinalDm(initialData.dmContent || "");
+      setDmReplyText(initialData.dmContent || "");
+      setFollowGate(!!initialData.followCheck);
+      setEmailGate(!!initialData.emailCheck);
       setUnlockedStep(5);
-    } else if (isOpen) {
-      // Default initial state: open with trigger selection (or comment selected as in Screenshot 1)
+    } else {
       setTriggerType("comment");
-      setUnlockedStep(1);
       setTargetPost("any");
-      setKeywordsType("any");
-      setKeywords("Price, Link, Shop");
-      setActionType("dm");
-      setReplyToggle(false);
-      setOpeningDm(true);
-      setOpeningText("gfds");
-      setOpeningButtonLabel("gfds");
-      setFollowGate(false);
-      setEmailGate(false);
-      setEmailDelivery(false);
-      setFinalDm("gfdsgf");
-      setErrorMsg(null);
+      setUnlockedStep(1);
       setPreviewTab("post");
     }
   }, [initialData, isOpen]);
 
-  // Sync preview tab with current step
-  useEffect(() => {
-    if (unlockedStep >= 4) {
-      setPreviewTab("dm");
-    } else if (unlockedStep >= 2) {
-      setPreviewTab("comments");
-    } else {
-      setPreviewTab("post");
-    }
-  }, [unlockedStep]);
-
-  if (!isOpen) return null;
-
-  // Insert token helper
-  const insertToken = (
-    setter: React.Dispatch<React.SetStateAction<string>>,
-    current: string
-  ) => {
+  const insertToken = (setter: React.Dispatch<React.SetStateAction<string>>, current: string) => {
     setter(current + "{{username}}");
   };
 
@@ -322,7 +301,6 @@ export function NewAutomationDrawer({
     setKeywords((prev) => (prev ? `${prev}, ${kw}` : kw));
   };
 
-  // Step advancement handler on clicking "Next"
   const handleNextStep = () => {
     setErrorMsg(null);
 
@@ -333,7 +311,6 @@ export function NewAutomationDrawer({
       return;
     }
 
-    // Comment automation validation per step
     if (unlockedStep === 1) {
       setUnlockedStep(2);
       setPreviewTab("comments");
@@ -379,13 +356,11 @@ export function NewAutomationDrawer({
     }
   };
 
-  // Step back handler
   const handleBackStep = () => {
     setErrorMsg(null);
     setUnlockedStep((prev) => Math.max(1, prev - 1));
   };
 
-  // Go live action
   const handleGoLive = () => {
     if (triggerType === "dm") {
       if (!dmReplyText.trim()) {
@@ -414,13 +389,12 @@ export function NewAutomationDrawer({
         followCheck: followGate,
         emailCheck: emailGate,
       },
-      true // active = true (Go live)
+      true
     );
     toast.success("Automation is now live!");
     onClose();
   };
 
-  // Save Draft action
   const handleSaveDraft = () => {
     onSave(
       {
@@ -433,14 +407,14 @@ export function NewAutomationDrawer({
         followCheck: followGate,
         emailCheck: emailGate,
       },
-      false // active = false (Draft)
+      false
     );
     toast.info("Draft saved successfully.");
     onClose();
   };
 
   const handleCloseAttempt = () => {
-    if (openingText || finalDm !== "gfdsgf" || unlockedStep > 1) {
+    if (unlockedStep > 1) {
       setShowDiscardConfirm(true);
     } else {
       onClose();
@@ -450,19 +424,24 @@ export function NewAutomationDrawer({
   const selectedPost = SAMPLE_POSTS.find((p) => p.id === selectedPostId) || SAMPLE_POSTS[0];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden select-none">
-      {/* 1. Dark Backdrop covering the entire window (sidebar and background page are visible underneath) */}
+    <div
+      className={cn(
+        "absolute inset-0 z-30 overflow-hidden select-none",
+        !isOpen && "pointer-events-none"
+      )}
+    >
+      {/* 1. Dark Backdrop: covers ONLY the Auto DM view area (Requirement 3: does NOT hide top header or sidebar!) */}
       <div
         onClick={handleCloseAttempt}
         className={cn(
-          "fixed inset-0 bg-black/45 backdrop-blur-2xs transition-opacity duration-300 ease-out z-40",
+          "absolute inset-0 bg-neutral-900/50 dark:bg-black/60 backdrop-blur-2xs transition-opacity duration-300 ease-out z-10",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       />
 
       {/* 2. Discard Confirmation Modal */}
       {showDiscardConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in zoom-in-95 duration-150">
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4">
             <h4 className="font-bold text-foreground text-base tracking-tight">
               Discard unsaved changes?
@@ -495,7 +474,7 @@ export function NewAutomationDrawer({
 
       {/* 3. Specific Post Selector Modal */}
       {isPostPickerOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-150">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4 max-h-[80vh] flex flex-col">
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <h4 className="font-bold text-foreground text-base">Select a Post</h4>
@@ -538,29 +517,29 @@ export function NewAutomationDrawer({
         </div>
       )}
 
-      {/* 4. Main Drawer Container: Positioned above page, starts beside the sidebar (left-0 on mobile, md:left-[224px]) */}
+      {/* 4. Main Drawer & Preview Container: below Top Header, right of Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 md:left-[224px] z-50 flex items-stretch shadow-2xl transition-transform duration-300 ease-out",
+          "absolute inset-0 z-20 flex items-stretch transition-transform duration-300 ease-out",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* LEFT COLUMN: Form configuration panel */}
-        <div className="w-[390px] sm:w-[420px] shrink-0 border-r border-border bg-card flex flex-col h-full overflow-hidden shadow-2xl">
-          {/* Drawer Header */}
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-border/80 px-6 bg-card/60">
+        {/* LEFT COLUMN: White form configuration panel - wider to prevent truncation */}
+        <div className="w-full max-w-[560px] sm:w-[540px] shrink-0 bg-white dark:bg-card border-r border-border flex flex-col h-full shadow-2xl relative z-20">
+          {/* Panel Header matching Snapshot (border line removed) */}
+          <div className="flex h-14 shrink-0 items-center justify-between px-6 bg-white dark:bg-card">
             <div className="flex items-center gap-2">
-              <span className="text-base text-foreground font-semibold">✳</span>
+              <span className="text-base text-foreground font-bold select-none">✳</span>
               <h2 className="text-base font-bold text-foreground tracking-tight">
                 {initialData ? "Edit automation" : "New automation"}
               </h2>
             </div>
 
-            {/* Black rounded square Close button matching reference screenshot */}
+            {/* Black rounded square Close button matching Snapshot 1 */}
             <button
               type="button"
               onClick={handleCloseAttempt}
-              className="flex size-7 items-center justify-center rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-80 transition-opacity"
+              className="flex size-7 items-center justify-center rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-80 transition-opacity shadow-xs"
               title="Close"
             >
               <X className="size-4 stroke-[2.5]" />
@@ -580,7 +559,7 @@ export function NewAutomationDrawer({
               <div className="grid grid-cols-2 gap-2.5">
                 <ChoiceBox
                   value="comment"
-                  currentValue={triggerType || ""}
+                  currentValue={triggerType}
                   onSelect={(val) => {
                     setTriggerType(val as any);
                     setUnlockedStep(1);
@@ -591,7 +570,7 @@ export function NewAutomationDrawer({
                 />
                 <ChoiceBox
                   value="dm"
-                  currentValue={triggerType || ""}
+                  currentValue={triggerType}
                   onSelect={(val) => {
                     setTriggerType(val as any);
                     setUnlockedStep(1);
@@ -656,7 +635,7 @@ export function NewAutomationDrawer({
                   </div>
                 </section>
 
-                {/* Step 2: Comment keywords selection (revealed when unlockedStep >= 2) */}
+                {/* Step 2: Comment keywords selection */}
                 {unlockedStep >= 2 && (
                   <section data-testid="flow-step-2" className="space-y-3 pt-2 border-t border-border/70 animate-in fade-in slide-in-from-top-2 duration-200">
                     <h4 className="font-semibold text-foreground text-xs">
@@ -719,7 +698,7 @@ export function NewAutomationDrawer({
                   </section>
                 )}
 
-                {/* Step 3: Action "Then" (revealed when unlockedStep >= 3) */}
+                {/* Step 3: Action "Then" */}
                 {unlockedStep >= 3 && (
                   <section data-testid="flow-step-3" className="space-y-3 pt-2 border-t border-border/70 animate-in fade-in slide-in-from-top-2 duration-200">
                     <h4 className="font-semibold text-foreground text-xs">Then</h4>
@@ -841,147 +820,82 @@ export function NewAutomationDrawer({
                         )}
                       </div>
                     )}
-
-                    {/* Advanced Accordion */}
-                    <div className="pt-2 border-t border-border/60">
-                      <button
-                        type="button"
-                        onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                        className="flex items-center gap-1.5 font-semibold text-muted-foreground hover:text-foreground"
-                      >
-                        {isAdvancedOpen ? (
-                          <ChevronDown className="size-3.5" />
-                        ) : (
-                          <ChevronRight className="size-3.5" />
-                        )}
-                        <span>Advanced</span>
-                      </button>
-
-                      {isAdvancedOpen && (
-                        <div className="mt-3 flex items-center gap-3 pl-4">
-                          <span className="font-semibold text-foreground">Priority</span>
-                          <input
-                            type="number"
-                            value={priority}
-                            onChange={(e) => setPriority(parseInt(e.target.value) || 0)}
-                            className="w-20 rounded-lg border border-border bg-background px-3 py-1.5 text-foreground font-mono outline-none focus:border-primary"
-                          />
-                        </div>
-                      )}
-                    </div>
                   </section>
                 )}
 
-                {/* Step 4: "They will get" Section (revealed when unlockedStep >= 4) */}
+                {/* Step 4: "They will get" */}
                 {unlockedStep >= 4 && (
                   <section data-testid="flow-step-4" className="space-y-4 pt-3 border-t border-border animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="space-y-1">
-                      <h3 className="text-sm font-bold text-foreground tracking-tight">They will get</h3>
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">
-                        Instagram allows up to 250 comment DMs per account per hour. Anyone over the limit
-                        gets theirs automatically a little later.
+                      <h3 className="text-sm font-bold text-foreground tracking-tight">
+                        They will get
+                      </h3>
+                      <p className="text-[11px] text-muted-foreground">
+                        Configure what the commenter receives when they trigger your rule.
                       </p>
                     </div>
 
-                    {/* Card 1: Opening DM */}
-                    <div className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-2xs">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            onClick={() => setOpeningDm(!openingDm)}
+                    {/* Opening DM Toggle & Inputs */}
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3 cursor-pointer select-none">
+                        <div
+                          onClick={() => setOpeningDm(!openingDm)}
+                          className={cn(
+                            "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
+                            openingDm ? "bg-black dark:bg-white" : "bg-neutral-300 dark:bg-neutral-700"
+                          )}
+                        >
+                          <span
                             className={cn(
-                              "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
-                              openingDm ? "bg-black dark:bg-white" : "bg-neutral-300 dark:bg-neutral-700"
+                              "pointer-events-none inline-block size-4 transform rounded-full bg-white dark:bg-black shadow-sm ring-0 transition duration-200 ease-in-out",
+                              openingDm ? "translate-x-4" : "translate-x-0"
                             )}
-                          >
-                            <span
-                              className={cn(
-                                "pointer-events-none inline-block size-4 transform rounded-full bg-white dark:bg-black shadow-sm ring-0 transition duration-200 ease-in-out",
-                                openingDm ? "translate-x-4" : "translate-x-0"
-                              )}
-                            />
-                          </div>
-                          <span className="font-bold text-foreground text-xs">Opening DM</span>
+                          />
                         </div>
-
-                        <span className="rounded-md border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-800 px-2 py-0.5 text-[10px] font-bold text-foreground">
-                          Recommended
+                        <span className="font-semibold text-foreground text-xs">
+                          Opening DM (recommended)
                         </span>
-                      </div>
+                      </label>
 
                       {openingDm && (
-                        <div className="space-y-2.5 pt-1">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <button
-                              type="button"
-                              onClick={() => insertToken(setOpeningText, openingText)}
-                              className="font-semibold text-primary hover:underline"
-                            >
-                              + Insert their name
-                            </button>
-                            <span className="text-muted-foreground font-mono">
-                              {openingText.length}/640 chars
-                            </span>
+                        <div className="space-y-3 pl-12">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-semibold text-muted-foreground">Message</span>
+                              <button
+                                type="button"
+                                onClick={() => insertToken(setOpeningText, openingText)}
+                                className="font-semibold text-primary hover:underline text-[11px]"
+                              >
+                                + Insert name
+                              </button>
+                            </div>
+                            <textarea
+                              rows={2}
+                              value={openingText}
+                              onChange={(e) => setOpeningText(e.target.value)}
+                              placeholder="Opening message"
+                              className="w-full rounded-xl border border-border bg-background p-3 text-xs text-foreground font-mono resize-none outline-none focus:border-primary shadow-2xs"
+                            />
                           </div>
-                          <p className="text-[10px] text-muted-foreground">
-                            {"{{username}} is replaced with the commenter's name."}
-                          </p>
-                          <textarea
-                            rows={3}
-                            value={openingText}
-                            onChange={(e) => {
-                              setOpeningText(e.target.value);
-                              if (errorMsg) setErrorMsg(null);
-                            }}
-                            placeholder="Message to send first"
-                            className="w-full rounded-xl border border-border bg-background p-3 text-xs text-foreground resize-none outline-none focus:border-primary leading-relaxed"
-                          />
 
-                          <div>
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-semibold text-muted-foreground">Button label</span>
                             <input
                               type="text"
                               value={openingButtonLabel}
                               onChange={(e) => setOpeningButtonLabel(e.target.value)}
-                              placeholder="Button label (e.g. Get the link)"
-                              className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs text-foreground outline-none focus:border-primary"
+                              placeholder="e.g. Get the link"
+                              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-primary shadow-2xs"
                             />
-                          </div>
-
-                          <div>
-                            <button
-                              type="button"
-                              onClick={() => setShowOpeningWhy(!showOpeningWhy)}
-                              className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
-                            >
-                              <Info className="size-3 text-muted-foreground" />
-                              <span>Why does an Opening DM matter?</span>
-                            </button>
-
-                            {showOpeningWhy && (
-                              <div className="mt-2 rounded-xl bg-muted/60 p-3 text-[11px] space-y-1.5 text-muted-foreground border border-border/60">
-                                <p className="font-bold text-foreground">What does an Opening DM do?</p>
-                                <p>
-                                  Opening DMs boost engagement in comment-to-DM automations. Only one private
-                                  reply is allowed per comment. Spend it on a first message with a button — the
-                                  moment they tap it, a 24-hour chat window opens so you can do way more than just
-                                  send a link.
-                                </p>
-                                <p className="font-semibold text-foreground pt-1">The Opening DM allows you to:</p>
-                                <ul className="list-disc pl-4 space-y-0.5">
-                                  <li><strong>Send a follow up:</strong> Deliver the promised link DM to anyone who taps the button.</li>
-                                  <li><strong>Grow your followers:</strong> Automatically ask them to follow you before sending the link.</li>
-                                  <li><strong>Collect emails:</strong> Ask for their email in a DM to connect with them beyond social.</li>
-                                </ul>
-                              </div>
-                            )}
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Card 2: Follow request gate */}
-                    <div className="rounded-2xl border border-border bg-card p-4 space-y-2 shadow-2xs">
-                      <div className="flex items-center gap-3">
+                    {/* Follow Gate Toggle */}
+                    <div className="space-y-3 pt-2 border-t border-border/50">
+                      <label className="flex items-center gap-3 cursor-pointer select-none">
                         <div
                           onClick={() => setFollowGate(!followGate)}
                           className={cn(
@@ -996,43 +910,26 @@ export function NewAutomationDrawer({
                             )}
                           />
                         </div>
-                        <span className="font-bold text-foreground text-xs">Follow request</span>
-                      </div>
+                        <span className="font-semibold text-foreground text-xs">
+                          Ask non-followers to follow you first
+                        </span>
+                      </label>
 
-                      <p className="text-[11px] text-muted-foreground leading-relaxed pl-12">
-                        Ask for a follow before sending the link. Non-followers get this message first — once
-                        they follow and tap the button, the link DM goes out.
-                      </p>
-
-                      {!openingDm && followGate && (
-                        <div className="ml-12 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-[11px]">
-                          The follow request needs the opening DM turned on.
-                        </div>
-                      )}
-
-                      {followGate && openingDm && (
-                        <div className="pl-12 pt-2 space-y-2">
+                      {followGate && (
+                        <div className="space-y-3 pl-12">
                           <textarea
                             rows={2}
                             value={followGateText}
                             onChange={(e) => setFollowGateText(e.target.value)}
-                            placeholder="Please follow me first to get the link! Tap the button below once you do 😊"
-                            className="w-full rounded-xl border border-border bg-background p-3 text-xs text-foreground resize-none outline-none focus:border-primary"
-                          />
-                          <input
-                            type="text"
-                            value={followGateButtonLabel}
-                            onChange={(e) => setFollowGateButtonLabel(e.target.value)}
-                            placeholder="Button label (e.g. Following)"
-                            className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-xs text-foreground outline-none focus:border-primary"
+                            className="w-full rounded-xl border border-border bg-background p-3 text-xs text-foreground font-mono resize-none outline-none focus:border-primary shadow-2xs"
                           />
                         </div>
                       )}
                     </div>
 
-                    {/* Card 3: Collect emails gate */}
-                    <div className="rounded-2xl border border-border bg-card p-4 space-y-2 shadow-2xs">
-                      <div className="flex items-center gap-3">
+                    {/* Email Gate Toggle */}
+                    <div className="space-y-3 pt-2 border-t border-border/50">
+                      <label className="flex items-center gap-3 cursor-pointer select-none">
                         <div
                           onClick={() => setEmailGate(!emailGate)}
                           className={cn(
@@ -1047,83 +944,26 @@ export function NewAutomationDrawer({
                             )}
                           />
                         </div>
-                        <span className="font-bold text-foreground text-xs">Collect emails</span>
-                      </div>
+                        <span className="font-semibold text-foreground text-xs">
+                          Collect their email address
+                        </span>
+                      </label>
 
-                      <p className="text-[11px] text-muted-foreground leading-relaxed pl-12">
-                        Ask for an email before sending the link. When they reply with their email it lands in
-                        Leads and the link DM goes out. Invalid replies get asked again.
-                      </p>
-
-                      {!openingDm && emailGate && (
-                        <div className="ml-12 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-[11px]">
-                          The email request needs the opening DM turned on.
-                        </div>
-                      )}
-
-                      {emailGate && openingDm && (
-                        <div className="pl-12 pt-2 space-y-2">
+                      {emailGate && (
+                        <div className="space-y-3 pl-12">
                           <textarea
                             rows={2}
                             value={emailGateText}
                             onChange={(e) => setEmailGateText(e.target.value)}
-                            placeholder="Drop your email before I send the link! I save the best bits for my email family 💌"
-                            className="w-full rounded-xl border border-border bg-background p-3 text-xs text-foreground resize-none outline-none focus:border-primary"
+                            className="w-full rounded-xl border border-border bg-background p-3 text-xs text-foreground font-mono resize-none outline-none focus:border-primary shadow-2xs"
                           />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Card 4: Also send the resource by email (PRO) */}
-                    <div className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-2xs">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            onClick={() => setEmailDelivery(!emailDelivery)}
-                            className={cn(
-                              "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
-                              emailDelivery ? "bg-black dark:bg-white" : "bg-neutral-300 dark:bg-neutral-700"
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "pointer-events-none inline-block size-4 transform rounded-full bg-white dark:bg-black shadow-sm ring-0 transition duration-200 ease-in-out",
-                                emailDelivery ? "translate-x-4" : "translate-x-0"
-                              )}
-                            />
-                          </div>
-                          <span className="font-bold text-foreground text-xs">Also send the resource by email</span>
-                        </div>
-                        <span className="rounded-full bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 text-[10px] font-bold">
-                          PRO
-                        </span>
-                      </div>
-
-                      <p className="text-[11px] text-muted-foreground leading-relaxed pl-12">
-                        When they reply with an email address, the email below goes out along with the link DM.
-                        Supports a PDF attachment and a reply-to address.
-                      </p>
-
-                      {emailDelivery && (
-                        <div className="pl-12 pt-1 space-y-2">
-                          <label className="flex items-start gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={emailConsent}
-                              onChange={(e) => setEmailConsent(e.target.checked)}
-                              className="mt-0.5 rounded border-border"
-                            />
-                            <span className="text-[11px] text-muted-foreground leading-tight">
-                              I will use the collected email addresses only to deliver the requested resource.
-                            </span>
-                          </label>
                         </div>
                       )}
                     </div>
                   </section>
                 )}
 
-                {/* Step 5: Final DM Section (revealed when unlockedStep >= 5) */}
+                {/* Step 5: Final DM Section */}
                 {unlockedStep >= 5 && (
                   <section data-testid="flow-step-5" className="space-y-5 pt-3 border-t border-border animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="space-y-1">
@@ -1149,9 +989,6 @@ export function NewAutomationDrawer({
                           {finalDm.length}/640 chars
                         </span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        {"{{username}} is replaced with the commenter's name."}
-                      </p>
                       <textarea
                         rows={4}
                         value={finalDm}
@@ -1164,7 +1001,7 @@ export function NewAutomationDrawer({
                     {/* Link Buttons */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-foreground text-xs">Action Link Buttons (up to 3)</h4>
+                        <h4 className="font-semibold text-foreground text-xs">Action Link Buttons</h4>
                         {links.length < 3 && (
                           <button
                             type="button"
@@ -1221,7 +1058,7 @@ export function NewAutomationDrawer({
               </>
             )}
 
-            {/* IF TRIGGER IS "DM" (Reference behavior: no mobile preview, direct reply DM flow) */}
+            {/* IF TRIGGER IS "DM" */}
             {triggerType === "dm" && (
               <div className="space-y-5 animate-in fade-in duration-200">
                 <section className="space-y-3">
@@ -1242,50 +1079,19 @@ export function NewAutomationDrawer({
                       label="a specific word or words"
                       connected={keywordsType === "specific"}
                     />
-
-                    {keywordsType === "specific" && (
-                      <ChoicePanel tone="yellow" className="space-y-2">
-                        <input
-                          type="text"
-                          value={keywords}
-                          onChange={(e) => setKeywords(e.target.value)}
-                          placeholder="Price, Link, Shop"
-                          className="w-full rounded-xl border border-foreground/30 bg-background px-3.5 py-2 text-xs text-foreground outline-none focus:border-primary font-mono shadow-2xs"
-                        />
-                        <p className="text-[10px] text-muted-foreground">
-                          Enter keywords separated by commas.
-                        </p>
-                      </ChoicePanel>
-                    )}
                   </div>
                 </section>
 
-                {unlockedStep >= 2 && (
-                  <section className="space-y-3 pt-2 border-t border-border/70 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <h4 className="font-semibold text-foreground text-xs">Reply DM</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <button
-                          type="button"
-                          onClick={() => insertToken(setDmReplyText, dmReplyText)}
-                          className="font-semibold text-primary hover:underline text-[11px]"
-                        >
-                          + Insert their name
-                        </button>
-                        <span className="text-muted-foreground font-mono text-[11px]">
-                          {dmReplyText.length}/1000 bytes
-                        </span>
-                      </div>
-                      <textarea
-                        rows={4}
-                        value={dmReplyText}
-                        onChange={(e) => setDmReplyText(e.target.value)}
-                        placeholder="Hello {{username}}! Thanks for messaging us..."
-                        className="w-full rounded-xl border border-border bg-background p-3.5 text-xs text-foreground font-mono resize-none outline-none focus:border-primary leading-relaxed shadow-2xs"
-                      />
-                    </div>
-                  </section>
-                )}
+                <section className="space-y-3 pt-2 border-t border-border/70">
+                  <h4 className="font-semibold text-foreground text-xs">Reply with DM</h4>
+                  <textarea
+                    rows={4}
+                    value={dmReplyText}
+                    onChange={(e) => setDmReplyText(e.target.value)}
+                    placeholder="Hello {{username}}! Thanks for messaging us..."
+                    className="w-full rounded-xl border border-border bg-background p-3.5 text-xs text-foreground font-mono resize-none outline-none focus:border-primary leading-relaxed shadow-2xs"
+                  />
+                </section>
               </div>
             )}
 
@@ -1297,13 +1103,13 @@ export function NewAutomationDrawer({
               </div>
             )}
 
-            {/* Intermediate Next Button matching Screenshot 1 */}
-            {triggerType && unlockedStep < (triggerType === "dm" ? 2 : 5) && (
-              <div className="flex justify-end pt-3">
+            {/* Intermediate Next Button matching Snapshot 1 */}
+            {unlockedStep < (triggerType === "dm" ? 2 : 5) && (
+              <div className="flex justify-end pt-2">
                 <button
                   type="button"
                   onClick={handleNextStep}
-                  className="rounded-xl bg-black px-6 py-2 text-xs font-bold text-white dark:bg-white dark:text-black hover:opacity-90 shadow-sm transition-all"
+                  className="rounded-md bg-primary px-4 h-9 text-sm font-medium text-primary-foreground hover:bg-primary/90 shadow-xs transition-all"
                 >
                   Next
                 </button>
@@ -1311,8 +1117,8 @@ export function NewAutomationDrawer({
             )}
           </div>
 
-          {/* Drawer Bottom Actions: Shown on final step (or draft option) */}
-          {triggerType && unlockedStep >= (triggerType === "dm" ? 2 : 5) && (
+          {/* Drawer Bottom Actions: Shown on final step */}
+          {unlockedStep >= (triggerType === "dm" ? 2 : 5) && (
             <div className="flex h-16 shrink-0 items-center justify-between border-t border-border px-6 bg-card/60">
               <button
                 type="button"
@@ -1342,264 +1148,261 @@ export function NewAutomationDrawer({
           )}
         </div>
 
-        {/* RIGHT COLUMN: Conditional Mobile Preview (Only when "When a comment is posted" is selected) */}
-        {triggerType === "comment" && isPreviewExpanded && (
-          <div className="w-[430px] shrink-0 border-r border-border bg-neutral-100/95 dark:bg-neutral-900/60 p-5 flex flex-col items-center justify-center relative select-none overflow-hidden backdrop-blur-xs animate-in fade-in duration-200">
-            {/* Toggle collapse preview button ◀ matching reference screenshot */}
-            <button
-              type="button"
-              onClick={() => setIsPreviewExpanded(false)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 flex size-6 items-center justify-center rounded-full bg-black text-white hover:opacity-80 shadow-md transition-transform"
-              title="Collapse preview"
-            >
-              <ChevronLeft className="size-3.5" />
-            </button>
+        {/* Divider Collapse Button < matching Snapshot 1 */}
+        <div className="relative shrink-0 flex items-center pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
+            className="absolute -left-3 top-1/2 -translate-y-1/2 z-30 flex size-6 items-center justify-center rounded-full bg-black text-white hover:scale-105 transition-all shadow-md"
+            title={isPreviewExpanded ? "Collapse preview" : "Expand preview"}
+          >
+            {isPreviewExpanded ? <ChevronLeft className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+          </button>
+        </div>
 
-            {/* iPhone Device Outer Frame with Hardware Buttons */}
-            <div className="relative w-[310px] h-[640px] flex items-center justify-center">
-              {/* Left Side Hardware Buttons (Mute + Volume) */}
-              <span aria-hidden={true} className="absolute -left-[3px] top-[95px] h-6 w-[3px] rounded-l-md bg-neutral-500/80" />
-              <span aria-hidden={true} className="absolute -left-[3px] top-[135px] h-11 w-[3px] rounded-l-md bg-neutral-500/80" />
-              <span aria-hidden={true} className="absolute -left-[3px] top-[195px] h-11 w-[3px] rounded-l-md bg-neutral-500/80" />
-              {/* Right Side Hardware Button (Power) */}
-              <span aria-hidden={true} className="absolute -right-[3px] top-[145px] h-14 w-[3px] rounded-r-md bg-neutral-500/80" />
+        {/* CENTER COLUMN: Mobile Phone Mockup Section with visible right scrollbar */}
+        {isPreviewExpanded && (
+          <div className="flex h-full flex-col overflow-y-scroll mobile-preview-scrollbar py-4 px-2 select-none pointer-events-auto shrink-0 border-r border-border/40">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex flex-1 justify-center px-5">
+                <div className="my-auto min-w-0">
+                  <div className="flex justify-center">
+                    {/* Phone Container: w-[390px] max-w-full */}
+                    <div className="relative min-w-0 px-1 w-[390px] max-w-full">
+                      {/* Left Side Hardware Buttons (Mute + Volume) */}
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-[-2px] top-[80px] h-6 w-[3px] rounded-l-md bg-neutral-600/70"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-[-2px] top-[122px] h-10 w-[3px] rounded-l-md bg-neutral-600/70"
+                      />
+                      {/* Right Side Hardware Button (Power) */}
+                      <span
+                        aria-hidden="true"
+                        className="absolute right-[-2px] top-[105px] h-12 w-[3px] rounded-r-md bg-neutral-600/70"
+                      />
 
-              {/* iPhone Metallic Outer Chassis */}
-              <div className="relative w-full h-full rounded-[48px] bg-gradient-to-b from-neutral-400 via-neutral-700 to-neutral-400 p-[2px] shadow-2xl">
-                {/* Inner Black Bezel */}
-                <div className="w-full h-full rounded-[46px] bg-black p-[5px]">
-                  {/* Inner Screen */}
-                  <div className="relative w-full h-full rounded-[41px] bg-white text-black overflow-hidden flex flex-col font-sans">
-                    {/* Status Bar */}
-                    <div className="flex h-10 shrink-0 items-center justify-between px-6 pt-2 text-[11px] font-semibold text-black z-30">
-                      <span className="tracking-tight">{liveTime}</span>
-
-                      {/* Dynamic Island pill with camera reflection */}
-                      <div className="relative flex h-[22px] w-[86px] items-center justify-end rounded-full bg-black pr-2">
-                        <span className="relative size-2.5 rounded-full bg-neutral-800">
-                          <span className="absolute left-[3px] top-[3px] size-1 rounded-full bg-neutral-600/80" />
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-xs font-normal">
-                        <span className="font-semibold text-[10px]">5G</span>
-                        {/* Battery Icon */}
-                        <div className="flex h-[10px] w-[19px] items-center rounded-[3px] border border-black/80 px-[1.5px]">
-                          <div className="h-[6px] w-full rounded-[1px] bg-black" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Header Tabs: Comments / DM (shown once unlockedStep >= 2, or Post view for Step 1) */}
-                    {unlockedStep >= 2 ? (
-                      <div className="flex items-center justify-center gap-6 border-b border-neutral-100 pb-2 text-xs font-semibold z-10">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewTab("comments")}
-                          className={cn(
-                            "pb-1 transition-colors relative",
-                            previewTab === "comments"
-                              ? "text-black font-bold"
-                              : "text-neutral-400 hover:text-neutral-600"
-                          )}
-                        >
-                          <span>Comments</span>
-                          {previewTab === "comments" && (
-                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-black rounded-full" />
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPreviewTab("dm")}
-                          className={cn(
-                            "pb-1 transition-colors relative",
-                            previewTab === "dm"
-                              ? "text-black font-bold"
-                              : "text-neutral-400 hover:text-neutral-600"
-                          )}
-                        >
-                          <span>DM</span>
-                          {previewTab === "dm" && (
-                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-black rounded-full" />
-                          )}
-                        </button>
-                      </div>
-                    ) : (
-                      /* Initial Header: Profile and Handle matching Screenshot 1 */
-                      <div className="flex items-center gap-2 px-4 py-2 border-b border-neutral-100">
-                        <div className="size-6 rounded-full bg-black flex items-center justify-center text-white text-[9px] font-bold shrink-0">
-                          {accountHandle[0]?.toUpperCase() || "T"}
-                        </div>
-                        <span className="font-bold text-xs text-neutral-900">{accountHandle}</span>
-                      </div>
-                    )}
-
-                    {/* iPhone Screen Content */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                      {/* 1. Initial State for Step 1 matching Screenshot 1 */}
-                      {unlockedStep === 1 ? (
-                        <div className="h-full flex flex-col items-center justify-center py-20 text-center">
-                          <p className="text-neutral-400 text-xs font-medium">
-                            {targetPost === "specific" && selectedPost
-                              ? selectedPost.caption
-                              : "Applies to every post"}
-                          </p>
-                        </div>
-                      ) : previewTab === "comments" ? (
-                        /* Comments view */
-                        <div className="space-y-4 pt-1">
-                          <div className="flex items-start gap-2.5">
-                            <div className="size-7 rounded-full bg-neutral-400 shrink-0" />
-                            <div className="space-y-0.5 text-xs">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-[11px]">username</span>
-                                <span className="text-neutral-400 text-[10px]">· Now</span>
-                              </div>
-                              <p className="text-neutral-800 text-xs">
-                                {keywordsType === "specific" && keywords
-                                  ? keywords.split(",")[0].trim()
-                                  : "Comment text"}
-                              </p>
+                      {/* Outer Gradient Chassis: rounded-[48px] */}
+                      <div className="rounded-[48px] bg-gradient-to-b from-neutral-500 via-neutral-900 to-neutral-500 p-[2px] shadow-xl">
+                        {/* Black Inner Bezel: rounded-[46px] bg-black p-[4px] */}
+                        <div className="rounded-[46px] bg-black p-[4px]">
+                          {/* Inner Screen: aspect-[390/844] rounded-[42px] */}
+                          <div className="relative select-none overflow-hidden rounded-[42px] bg-background text-foreground flex flex-col aspect-[390/844]">
+                            {/* Dynamic Island pill */}
+                            <div
+                              aria-hidden="true"
+                              className="absolute left-1/2 top-2 z-30 flex h-[24px] w-[84px] -translate-x-1/2 items-center justify-end rounded-full bg-black pr-2"
+                            >
+                              <span className="relative size-2.5 rounded-full bg-neutral-800">
+                                <span className="absolute left-[3px] top-[3px] size-1 rounded-full bg-neutral-600/80" />
+                              </span>
                             </div>
-                          </div>
 
-                          {/* Public reply thread mockup */}
-                          {replyToggle && replyVariants[0] && (
-                            <div className="ml-8 flex items-start gap-2.5 border-l-2 border-neutral-200 pl-3">
-                              <div className="size-6 rounded-full bg-black shrink-0 flex items-center justify-center text-white text-[9px] font-bold">
-                                {accountHandle[0]?.toUpperCase() || "A"}
-                              </div>
-                              <div className="space-y-0.5 text-xs">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-bold text-[11px]">@{accountHandle}</span>
-                                  <span className="text-neutral-400 text-[10px]">· Now</span>
-                                </div>
-                                <p className="text-neutral-800 text-xs whitespace-pre-wrap">
-                                  {replyVariants[0].replace("{{username}}", "@username")}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        /* DM Thread view matching Screenshot 2 */
-                        <div className="space-y-3 pt-1">
-                          {/* Sender header with handle matching screenshot 2 */}
-                          <div className="flex items-center gap-2 pb-2 border-b border-neutral-100">
-                            <div className="size-6 rounded-full bg-black flex items-center justify-center text-white text-[9px] font-bold shrink-0">
-                              {accountHandle[0]?.toUpperCase() || "T"}
-                            </div>
-                            <span className="font-bold text-xs text-neutral-900">{accountHandle}</span>
-                          </div>
-
-                          {/* 1. Opening DM message bubble from account */}
-                          {openingDm && (
-                            <div className="space-y-2">
-                              {/* Left side message bubble */}
-                              <div className="flex items-end gap-2">
-                                <div className="size-6 rounded-full bg-black flex items-center justify-center text-white text-[9px] font-bold shrink-0">
-                                  {accountHandle[0]?.toUpperCase() || "T"}
-                                </div>
-                                <div className="max-w-[80%] rounded-2xl bg-neutral-100 px-3.5 py-2.5 text-xs text-neutral-900 leading-relaxed shadow-2xs">
-                                  {openingText || "gfds"}
+                            {/* Status Bar */}
+                            <div className="flex shrink-0 items-center justify-between px-6 pb-1 pt-2.5 text-[11px] font-semibold text-foreground z-20">
+                              <span className="tracking-tight">{liveTime}</span>
+                              <div className="flex items-center gap-1.5 text-xs font-normal">
+                                <span className="font-semibold text-[10px]">5G</span>
+                                <div className="flex h-[10px] w-[18px] items-center rounded-[3px] border border-current px-[1.5px]">
+                                  <div className="h-[6px] w-full rounded-[1px] bg-current" />
                                 </div>
                               </div>
+                            </div>
 
-                              {/* Interactive button inside or under opening DM */}
-                              {openingButtonLabel && (
-                                <div className="ml-8 max-w-[80%]">
-                                  <div className="rounded-xl border border-neutral-200 bg-white py-2 text-center text-xs font-semibold text-neutral-800 shadow-2xs">
-                                    {openingButtonLabel}
+                            {/* Content Scroll Area */}
+                            <div className="flex-1 min-h-0 overflow-y-auto">
+                              <div className="flex flex-col">
+                                {/* Header: User profile */}
+                                <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 shrink-0">
+                                  <div className="size-6 rounded-full overflow-hidden bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0">
+                                    <span>📸</span>
                                   </div>
+                                  <span className="font-bold text-xs text-foreground">{accountHandle}</span>
                                 </div>
-                              )}
 
-                              {/* Right side user tap bubble (black bubble matching screenshot 2) */}
-                              <div className="flex justify-end pt-1">
-                                <div className="max-w-[80%] rounded-2xl bg-black px-3.5 py-2 text-xs font-medium text-white shadow-2xs">
-                                  {openingButtonLabel || "gfds"}
-                                </div>
+                                {/* Views */}
+                                {previewTab === "post" && (
+                                  <div className="flex aspect-square w-full items-center justify-center bg-muted px-6 text-center text-sm text-muted-foreground">
+                                    Applies to every post
+                                  </div>
+                                )}
+
+                                {previewTab === "comments" && (
+                                  <div className="p-4 space-y-4">
+                                    <div className="p-2.5 rounded-xl bg-muted/60 border border-border text-xs text-foreground">
+                                      <span className="font-bold mr-1">@{accountHandle}:</span>
+                                      <span>{selectedPost.caption}</span>
+                                    </div>
+
+                                    <div className="flex items-start gap-2.5 pt-1">
+                                      <div className="size-7 rounded-full bg-neutral-300 dark:bg-neutral-700 shrink-0" />
+                                      <div className="space-y-0.5 text-xs">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-bold text-[11px]">alex_creator</span>
+                                          <span className="text-muted-foreground text-[10px]">· Now</span>
+                                        </div>
+                                        <p className="text-foreground text-xs">
+                                          {keywordsType === "specific" && keywords
+                                            ? keywords.split(",")[0].trim()
+                                            : "Link please!"}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="ml-8 flex items-start gap-2.5 border-l-2 border-border pl-3">
+                                      <div className="size-6 rounded-full bg-black text-white dark:bg-white dark:text-black shrink-0 flex items-center justify-center text-[9px] font-bold">
+                                        {accountHandle[0]?.toUpperCase() || "S"}
+                                      </div>
+                                      <div className="space-y-0.5 text-xs">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-bold text-[11px]">@{accountHandle}</span>
+                                          <span className="text-muted-foreground text-[10px]">· Now</span>
+                                        </div>
+                                        <p className="text-foreground text-xs whitespace-pre-wrap">
+                                          {replyVariants[0]?.replace("{{username}}", "@alex_creator") || "@alex_creator pls check DM! 📩"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {previewTab === "dm" && (
+                                  <div className="p-4 space-y-3">
+                                    <div className="flex items-center gap-2 pb-2 border-b border-border/80">
+                                      <div className="size-6 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center text-[9px] font-bold shrink-0">
+                                        {accountHandle[0]?.toUpperCase() || "S"}
+                                      </div>
+                                      <div className="leading-tight">
+                                        <span className="font-bold text-xs text-foreground block">{accountHandle}</span>
+                                        <span className="text-[10px] text-emerald-600 block">Active now</span>
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <div className="flex items-end gap-2">
+                                        <div className="size-6 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center text-[9px] font-bold shrink-0">
+                                          {accountHandle[0]?.toUpperCase() || "S"}
+                                        </div>
+                                        <div className="max-w-[80%] rounded-2xl bg-muted px-3.5 py-2.5 text-xs text-foreground leading-relaxed shadow-2xs">
+                                          {openingText || "Hey! Tap below to get the link 👇"}
+                                        </div>
+                                      </div>
+
+                                      {openingButtonLabel && (
+                                        <div className="ml-8 max-w-[80%]">
+                                          <div className="rounded-xl border border-border bg-card py-2 text-center text-xs font-semibold text-foreground shadow-2xs">
+                                            {openingButtonLabel}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      <div className="flex justify-end pt-1">
+                                        <div className="max-w-[80%] rounded-2xl bg-primary text-primary-foreground px-3.5 py-2 text-xs font-medium shadow-2xs">
+                                          {openingButtonLabel || "Get the link"}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {followGate && (
+                                      <div className="space-y-2 pt-1">
+                                        <div className="flex items-end gap-2">
+                                          <div className="size-6 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center text-[9px] font-bold shrink-0">
+                                            {accountHandle[0]?.toUpperCase() || "S"}
+                                          </div>
+                                          <div className="max-w-[80%] rounded-2xl bg-muted px-3.5 py-2.5 text-xs text-foreground leading-relaxed shadow-2xs">
+                                            {followGateText}
+                                          </div>
+                                        </div>
+                                        <div className="ml-8 max-w-[80%]">
+                                          <div className="rounded-xl border border-border bg-card py-2 text-center text-xs font-semibold text-foreground shadow-2xs">
+                                            {followGateButtonLabel}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    <div className="space-y-2 pt-1">
+                                      <div className="flex items-end gap-2">
+                                        <div className="size-6 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center text-[9px] font-bold shrink-0">
+                                          {accountHandle[0]?.toUpperCase() || "S"}
+                                        </div>
+                                        <div className="max-w-[80%] rounded-2xl bg-muted px-3.5 py-2.5 text-xs text-foreground leading-relaxed shadow-2xs whitespace-pre-wrap">
+                                          {finalDm || "Here is your requested link!"}
+                                        </div>
+                                      </div>
+
+                                      {links.map((link, i) => (
+                                        <div key={i} className="ml-8 max-w-[80%]">
+                                          <a
+                                            href={link.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="block w-full rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-black py-2 text-center text-xs font-bold shadow-xs hover:opacity-90 transition-opacity"
+                                          >
+                                            {link.label || "Get the link"}
+                                          </a>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          )}
 
-                          {/* 2. Follow Gate Simulation */}
-                          {followGate && openingDm && (
-                            <div className="space-y-2 pt-1">
-                              <div className="flex items-end gap-2">
-                                <div className="size-6 rounded-full bg-black flex items-center justify-center text-white text-[9px] font-bold shrink-0">
-                                  {accountHandle[0]?.toUpperCase() || "T"}
-                                </div>
-                                <div className="max-w-[80%] rounded-2xl bg-neutral-100 px-3.5 py-2.5 text-xs text-neutral-900 leading-relaxed shadow-2xs">
-                                  {followGateText}
-                                </div>
-                              </div>
-                              <div className="ml-8 max-w-[80%]">
-                                <div className="rounded-xl border border-neutral-200 bg-white py-2 text-center text-xs font-semibold text-neutral-800 shadow-2xs">
-                                  {followGateButtonLabel}
-                                </div>
-                              </div>
-                              <div className="flex justify-end pt-1">
-                                <div className="max-w-[80%] rounded-2xl bg-black px-3.5 py-2 text-xs font-medium text-white shadow-2xs">
-                                  {followGateButtonLabel}
-                                </div>
-                              </div>
+                            {/* Home Indicator */}
+                            <div
+                              aria-hidden="true"
+                              className="pointer-events-none absolute bottom-0 left-0 right-0 z-30 flex h-5 items-center justify-center"
+                            >
+                              <div className="h-1 w-24 rounded-full bg-neutral-300 dark:bg-neutral-600" />
                             </div>
-                          )}
-
-                          {/* 3. Email Gate Simulation */}
-                          {emailGate && openingDm && (
-                            <div className="space-y-2 pt-1">
-                              <div className="flex items-end gap-2">
-                                <div className="size-6 rounded-full bg-black flex items-center justify-center text-white text-[9px] font-bold shrink-0">
-                                  {accountHandle[0]?.toUpperCase() || "T"}
-                                </div>
-                                <div className="max-w-[80%] rounded-2xl bg-neutral-100 px-3.5 py-2.5 text-xs text-neutral-900 leading-relaxed shadow-2xs">
-                                  {emailGateText}
-                                </div>
-                              </div>
-                              <div className="flex justify-end pt-1">
-                                <div className="max-w-[80%] rounded-2xl bg-black px-3.5 py-2 text-xs font-medium text-white shadow-2xs">
-                                  you@email.com
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 4. Final Delivered DM Message matching screenshot 2 */}
-                          {unlockedStep >= 5 && (
-                            <div className="space-y-2 pt-1">
-                              <div className="flex items-end gap-2">
-                                <div className="size-6 rounded-full bg-black flex items-center justify-center text-white text-[9px] font-bold shrink-0">
-                                  {accountHandle[0]?.toUpperCase() || "T"}
-                                </div>
-                                <div className="max-w-[80%] rounded-2xl bg-neutral-100 px-3.5 py-2.5 text-xs text-neutral-900 leading-relaxed shadow-2xs whitespace-pre-wrap">
-                                  {finalDm || "gfdsgf"}
-                                </div>
-                              </div>
-
-                              {/* Action link buttons */}
-                              {links.map((link, i) => (
-                                <div key={i} className="ml-8 max-w-[80%]">
-                                  <a
-                                    href={link.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="block w-full rounded-xl bg-neutral-900 py-2 text-center text-xs font-bold text-white shadow-xs hover:opacity-90 transition-opacity"
-                                  >
-                                    {link.label || "Get the link"}
-                                  </a>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </div>
+                  </div>
 
-                    {/* iPhone Bottom Bar Indicator */}
-                    <div className="h-5 flex items-center justify-center shrink-0">
-                      <div className="h-1 w-24 rounded-full bg-neutral-400" />
+                  {/* Segmented Switcher Pill BELOW the Phone matching DevTools screenshot */}
+                  <div className="mt-4 flex justify-center">
+                    <div className="inline-flex items-center gap-1 rounded-xl bg-neutral-200/90 dark:bg-neutral-800 p-1 shadow-xs">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTab("post")}
+                        className={cn(
+                          "px-5 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                          previewTab === "post"
+                            ? "bg-white dark:bg-neutral-900 text-foreground shadow-xs"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Post
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTab("comments")}
+                        className={cn(
+                          "px-5 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                          previewTab === "comments"
+                            ? "bg-white dark:bg-neutral-900 text-foreground shadow-xs"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Comments
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTab("dm")}
+                        className={cn(
+                          "px-5 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                          previewTab === "dm"
+                            ? "bg-white dark:bg-neutral-900 text-foreground shadow-xs"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        DM
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1608,19 +1411,8 @@ export function NewAutomationDrawer({
           </div>
         )}
 
-        {/* Collapsed Preview Rail: When preview is collapsed by clicking ◀ */}
-        {triggerType === "comment" && !isPreviewExpanded && (
-          <div className="w-8 shrink-0 bg-neutral-100/90 dark:bg-neutral-900/60 flex items-center justify-center border-r border-border backdrop-blur-xs">
-            <button
-              type="button"
-              onClick={() => setIsPreviewExpanded(true)}
-              className="flex size-6 items-center justify-center rounded-full bg-black text-white hover:opacity-80 shadow-md transition-transform"
-              title="Expand preview"
-            >
-              <ChevronRight className="size-3.5" />
-            </button>
-          </div>
-        )}
+        {/* Transparent area to the right: reveals the dimmed Auto DM background & chat button */}
+        <div className="flex-1 pointer-events-none" />
       </div>
     </div>
   );

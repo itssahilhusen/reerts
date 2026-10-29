@@ -59,6 +59,13 @@ const config: Config = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "0.75rem",
+        "2xl": "1rem",
+        "3xl": "1.5rem",
+      },
+      boxShadow: {
+        "2xs": "0 1px rgb(0 0 0 / 0.05)",
+        xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
       },
       keyframes: {
         "accordion-down": {

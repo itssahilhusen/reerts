@@ -23,6 +23,8 @@ Thumbs.db
 
 # Reverse Engineering (RE) Artifacts & Analysis Dumps
 chunks/
+chunks*/
+chunks_*/
 scripts/
 extracted/
 decompiled/
@@ -51,10 +53,20 @@ target_flight.txt
 *_extracted.json
 *_snippets.json
 *_matches.txt
-target_*.txt
-target_*.json
+*_messages.json
+*_chunks.json
+automation_*.json
+carousel_*.json
+carousel_*.txt
+flight_*.txt
+flight_*.json
+target_*.*
 *.flight
 *.flight.txt
+target_*.png
+target_*.html
+target_*.json
+target_*.txt
 
 # Root-level Scratch / Extracted JS & HTML
 /*.js

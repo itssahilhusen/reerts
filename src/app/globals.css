@@ -9,6 +9,10 @@
   --font-geist-mono: 'Geist Mono', monospace;
   --font-instrument-serif: 'Instrument Serif', 'Playfair Display', Georgia, serif;
   --radius: 0.625rem;
+  --sidebar-width: 14rem;
+  --sidebar-width-icon: 3rem;
+  --header-height: 3rem;
+  --push-sheet-width: min(560px, 100vw);
   --background: #ffffff;
   --foreground: #0a0a0a;
   --card: #ffffff;
@@ -270,6 +274,42 @@ body {
   background: rgba(255, 255, 255, 0.65);
 }
 
+/* Dedicated visible scrollbar for mobile preview */
+.mobile-preview-scrollbar {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.5) rgba(0, 0, 0, 0.05);
+}
+.mobile-preview-scrollbar::-webkit-scrollbar {
+  width: 7px;
+  display: block;
+}
+.mobile-preview-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 9999px;
+}
+.mobile-preview-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.5);
+  border-radius: 9999px;
+  transition: background-color 0.15s ease;
+}
+.mobile-preview-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(80, 80, 80, 0.8);
+}
+.dark .mobile-preview-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.06);
+}
+.dark .mobile-preview-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+.dark .mobile-preview-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
+}
+.dark .mobile-preview-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
 /* Hide scrollbar utility (used only where explicitly intended, e.g. horizontal tab overflow on mobile) */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -352,3 +392,25 @@ html, body {
 }
 
 
+
+/* Shadcn & Posteady UI Utilities */
+.shadow-2xs {
+  box-shadow: 0 1px rgb(0 0 0 / 0.05);
+}
+.shadow-xs {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+.outline-hidden {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.contain-size {
+  contain: size;
+}

@@ -213,7 +213,7 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
         {/* Instagram Account Pill */}
         <button
           type="button"
-          className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 shadow-2xs text-sm font-medium hover:bg-muted/50 transition-colors"
+          className="inline-flex shrink-0 items-center justify-between gap-2 rounded-md border border-border shadow-xs hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 h-9 px-4 py-2 text-sm font-normal bg-accent hover:bg-background transition-all"
         >
           <Image src="/images/platforms/instagram.svg" alt="Instagram" width={16} height={16} className="size-4 rounded-full shrink-0 object-cover" />
           <span className="text-foreground">{account}</span>
@@ -225,7 +225,7 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
           type="button"
           disabled={isDiscovering}
           onClick={handleDiscoverIdeas}
-          className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 shadow-2xs text-sm font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 h-9 px-4 py-2 text-sm font-medium text-foreground transition-all disabled:opacity-50"
         >
           {isDiscovering ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4 text-muted-foreground" />}
           <span>{isDiscovering ? "Scanning Sources..." : "Discover Content Ideas"}</span>
@@ -235,7 +235,7 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
         <button
           type="button"
           onClick={() => onOpenComposer()}
-          className="flex items-center gap-2 rounded-lg bg-black text-white dark:bg-white dark:text-black px-4 py-2 shadow-xs text-sm font-semibold hover:opacity-90 transition-all"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs h-9 px-4 py-2 text-sm font-medium transition-all"
         >
           <Pencil className="size-4 stroke-[2.2]" />
           <span>Create Content</span>
@@ -246,7 +246,7 @@ export function StudioView({ onOpenComposer }: StudioViewProps) {
       <div className="flex-1 min-h-0 overflow-x-auto pb-2">
         <div className="grid grid-cols-4 gap-5 h-full min-w-[1120px] xl:min-w-0">
           {/* Column 1: Content Ideas */}
-          <div className="flex flex-col h-full rounded-2xl border border-border bg-[#fafafb] dark:bg-[#1f1f23] shadow-2xs overflow-hidden">
+          <div className="flex flex-col h-full rounded-xl border border-border/80 bg-muted/30 shadow-xs overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-card/50">
               <div className="flex items-center gap-2">

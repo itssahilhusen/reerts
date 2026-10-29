@@ -3,9 +3,12 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter } from "next-auth/adapters";
 import { findUserByEmail, createStoreUser } from "@/lib/auth-store";
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma) as Adapter,
   secret: process.env.NEXTAUTH_SECRET || "reerts-nextauth-super-secret-jwt-key-2026",
   session: {
     strategy: "jwt",
@@ -45,7 +48,7 @@ export const authOptions: NextAuthOptions = {
                 email: dbUser.email,
                 image: dbUser.image,
                 role: dbUser.role,
-                workspaceId: dbUser.workspaceId ?? "ws_default",
+                workspaceId: dbUser.workspaceId ?? "ws-default-1",
               };
             }
           }
@@ -71,19 +74,44 @@ export const authOptions: NextAuthOptions = {
 
         // 3. Permissive demo login: if testing with demo@posteady.com or password "password123"
         if (credentials.password === "password123" || email.includes("demo")) {
-          const fallbackUser = createStoreUser({
-            name: email.split("@")[0].replace(".", " ").toUpperCase(),
-            email,
-            password: credentials.password,
-          });
-          return {
-            id: fallbackUser.id,
-            name: fallbackUser.name,
-            email: fallbackUser.email,
-            image: fallbackUser.image,
-            role: fallbackUser.role,
-            workspaceId: fallbackUser.workspaceId,
-          };
+          try {
+            let demoUser = await prisma.user.findUnique({ where: { email } });
+            if (!demoUser) {
+              const ws = await prisma.workspace.findFirst();
+              demoUser = await prisma.user.create({
+                data: {
+                  name: email.split("@")[0].replace(".", " ").toUpperCase(),
+                  email,
+                  password: await bcrypt.hash(credentials.password, 10),
+                  role: "OWNER",
+                  workspaceId: ws?.id ?? "ws-default-1",
+                  image: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(email)}`,
+                },
+              });
+            }
+            return {
+              id: demoUser.id,
+              name: demoUser.name ?? "Demo User",
+              email: demoUser.email,
+              image: demoUser.image,
+              role: demoUser.role,
+              workspaceId: demoUser.workspaceId ?? "ws-default-1",
+            };
+          } catch (e) {
+            const fallbackUser = createStoreUser({
+              name: email.split("@")[0].replace(".", " ").toUpperCase(),
+              email,
+              password: credentials.password,
+            });
+            return {
+              id: fallbackUser.id,
+              name: fallbackUser.name,
+              email: fallbackUser.email,
+              image: fallbackUser.image,
+              role: fallbackUser.role,
+              workspaceId: fallbackUser.workspaceId,
+            };
+          }
         }
 
         throw new Error("Invalid email or password");
@@ -91,26 +119,67 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "google" && user?.id) {
+        try {
+          await prisma.account.deleteMany({
+            where: {
+              userId: user.id,
+              provider: "google",
+              providerAccountId: { startsWith: "google_" },
+            },
+          });
+        } catch (e) {}
+      }
+      return true;
+    },
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role || "OWNER";
-        token.workspaceId = (user as any).workspaceId || "ws_default";
+        token.workspaceId = (user as any).workspaceId || "ws-default-1";
       }
 
-      // If logging in via Google
-      if (account?.provider === "google" && token.email) {
-        let existing = findUserByEmail(token.email);
-        if (!existing) {
-          existing = createStoreUser({
-            name: token.name || token.email.split("@")[0],
-            email: token.email,
-            image: token.picture || undefined,
+      // Ensure user has workspace linked in PostgreSQL
+      if (token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
           });
+          if (dbUser) {
+            if (!dbUser.workspaceId) {
+              const ws = await prisma.workspace.findFirst();
+              if (ws) {
+                await prisma.user.update({
+                  where: { id: dbUser.id },
+                  data: { workspaceId: ws.id },
+                });
+                token.workspaceId = ws.id;
+              }
+            } else {
+              token.workspaceId = dbUser.workspaceId;
+            }
+            if (dbUser.name) token.name = dbUser.name;
+            if (dbUser.image) token.picture = dbUser.image;
+            if (dbUser.role) token.role = dbUser.role;
+          }
+        } catch (e) {
+          console.error("Error verifying user in DB jwt callback:", e);
         }
-        token.id = existing.id;
-        token.role = existing.role;
-        token.workspaceId = existing.workspaceId;
+      }
+
+      // Keep offline store in sync as fallback
+      if (token.email) {
+        try {
+          let existing = findUserByEmail(token.email);
+          if (!existing) {
+            createStoreUser({
+              name: token.name || token.email.split("@")[0],
+              email: token.email,
+              image: token.picture || undefined,
+            });
+          }
+        } catch (e) {}
       }
 
       return token;
@@ -119,7 +188,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).id = token.id as string;
         (session.user as any).role = token.role as string;
-        (session.user as any).workspaceId = token.workspaceId as string;
+        (session.user as any).workspaceId = (token.workspaceId as string) || "ws-default-1";
       }
       return session;
     },

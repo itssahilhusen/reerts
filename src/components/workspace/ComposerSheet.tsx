@@ -267,7 +267,7 @@ export function ComposerSheet({
   return (
     <div className="fixed inset-0 z-50 flex bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       {/* Slide-out Sheet Canvas */}
-      <div className="relative ml-auto h-full w-full max-w-5xl bg-background border-l border-border shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative ml-auto h-full w-full max-w-[560px] bg-background border-l border-border shadow-2xl flex flex-col overflow-hidden">
         {/* Top Composer Header */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4 sm:px-6 bg-card/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
@@ -317,7 +317,7 @@ export function ComposerSheet({
                 type="button"
                 onClick={() => togglePlatform(plat.id)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all select-none border",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium h-8 px-3 transition-all select-none border",
                   isSelected
                     ? "border-primary bg-primary text-primary-foreground shadow-xs"
                     : "border-border bg-card/80 text-muted-foreground hover:bg-card hover:text-foreground"
@@ -504,7 +504,7 @@ export function ComposerSheet({
             <button
               type="button"
               onClick={handleSaveDraft}
-              className="rounded-lg border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none border shadow-xs h-9 px-4 py-2 text-foreground bg-tone-yellow hover:bg-tone-yellow hover:brightness-95 dark:hover:brightness-110"
             >
               Save as draft
             </button>
@@ -514,7 +514,7 @@ export function ComposerSheet({
             <button
               type="button"
               onClick={() => setScheduleModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none border shadow-xs h-9 px-4 py-2 text-foreground bg-tone-green hover:bg-tone-green hover:brightness-95 dark:hover:brightness-110"
             >
               <CalendarIcon className="size-3.5 text-muted-foreground" />
               Schedule
@@ -523,7 +523,7 @@ export function ComposerSheet({
             <button
               type="button"
               onClick={handlePostNow}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all shadow-xs"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none border shadow-xs h-9 px-4 py-2 text-foreground bg-tone-blue hover:bg-tone-blue hover:brightness-95 dark:hover:brightness-110"
             >
               Post now
             </button>
