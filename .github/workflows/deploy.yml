@@ -46,8 +46,9 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm db:generate
 
-      - name: Run Typecheck (Backend & Orchestrator)
+      - name: Run Typecheck (Frontend, Backend, Orchestrator & Libraries)
         run: |
+          pnpm --filter @reerts/frontend exec tsc --noEmit
           pnpm --filter @reerts/backend exec tsc --noEmit
           pnpm --filter @reerts/orchestrator exec tsc --noEmit
           pnpm --filter @reerts/helpers exec tsc --noEmit

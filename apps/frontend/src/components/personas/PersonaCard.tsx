@@ -68,10 +68,10 @@ export function PersonaCard({
 
   // Section draft states
   const [draftProfileIdentity, setDraftProfileIdentity] = useState(persona.profile_identity || "");
-  const [draftAudience, setDraftAudience] = useState(persona.target_audience || {});
-  const [draftHook, setDraftHook] = useState(persona.hook_setting || {});
-  const [draftStyle, setDraftStyle] = useState(persona.writing_style_analysis || {});
-  const [draftCta, setDraftCta] = useState(persona.cta_setting || { items: [] });
+  const [draftAudience, setDraftAudience] = useState<any>(persona.target_audience || {});
+  const [draftHook, setDraftHook] = useState<any>(persona.hook_setting || {});
+  const [draftStyle, setDraftStyle] = useState<any>(persona.writing_style_analysis || {});
+  const [draftCta, setDraftCta] = useState<any>(persona.cta_setting || { items: [] });
   const [draftRefLink, setDraftRefLink] = useState(persona.reference_link_setting || { enabled: false, format: "", placement_note: null });
   const [draftTopics, setDraftTopics] = useState<string[]>(persona.core_topics || []);
   const [newTopicInput, setNewTopicInput] = useState("");
