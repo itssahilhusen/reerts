@@ -1,17 +1,28 @@
 {
-  "name": "reerts",
-  "version": "0.1.0",
+  "name": "reerts-monorepo",
+  "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@11.21.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "postinstall": "prisma generate",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "db:generate": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts"
+    "dev": "pnpm run --filter @reerts/frontend --filter @reerts/orchestrator --parallel dev",
+    "dev:all": "pnpm run --filter ./apps/* --parallel dev",
+    "dev:frontend": "pnpm --filter @reerts/frontend run dev",
+    "dev:backend": "pnpm --filter @reerts/backend run dev",
+    "dev:orchestrator": "pnpm --filter @reerts/orchestrator run dev",
+    "build": "pnpm -r run build",
+    "build:frontend": "pnpm --filter @reerts/frontend run build",
+    "build:backend": "pnpm --filter @reerts/backend run build",
+    "build:orchestrator": "pnpm --filter @reerts/orchestrator run build",
+    "lint": "pnpm --filter @reerts/frontend run lint",
+    "prisma-generate": "prisma generate --schema=./libraries/database/prisma/schema.prisma",
+    "prisma-db-push": "prisma db push --schema=./libraries/database/prisma/schema.prisma",
+    "prisma-studio": "prisma studio --schema=./libraries/database/prisma/schema.prisma",
+    "db:generate": "pnpm run prisma-generate",
+    "db:push": "pnpm run prisma-db-push",
+    "db:studio": "pnpm run prisma-studio",
+    "db:seed": "pnpm --filter @reerts/commands run seed",
+    "docker:dev": "docker compose -f docker-compose.dev.yaml up -d",
+    "postinstall": "node -e \"try { require('child_process').execSync('prisma generate --schema=./libraries/database/prisma/schema.prisma', { stdio: 'inherit' }); } catch (e) { console.warn('Note: Prisma client locked by active dev process, generation will refresh on server restart.'); }\""
   },
   "dependencies": {
     "@auth/prisma-adapter": "^1.6.0",
@@ -46,6 +57,7 @@
     "postcss": "^8",
     "prisma": "^5.14.0",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.19.0",
     "typescript": "^5"
   }
 }

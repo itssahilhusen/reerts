@@ -1,0 +1,40 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@reerts/database": ["../../libraries/database/src/index.ts"],
+      "@reerts/database/*": ["../../libraries/database/src/*"],
+      "@reerts/integrations": ["../../libraries/integrations/src/index.ts"],
+      "@reerts/integrations/*": ["../../libraries/integrations/src/*"],
+      "@reerts/helpers": ["../../libraries/helpers/src/index.ts"],
+      "@reerts/helpers/*": ["../../libraries/helpers/src/*"],
+      "@reerts/react": ["../../libraries/react-shared-libraries/src/index.ts"],
+      "@reerts/react/*": ["../../libraries/react-shared-libraries/src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

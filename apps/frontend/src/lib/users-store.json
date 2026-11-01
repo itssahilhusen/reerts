@@ -1,0 +1,78 @@
+[
+  {
+    "id": "usr_demo_1",
+    "name": "Alex Rivers",
+    "email": "demo@posteady.com",
+    "passwordHash": "$2b$10$cUd3zWOlh6LnLitbe/ZIVOWgU0Q7ahW0FoL/NVjgLTQ0P5Qb4Nobq",
+    "role": "OWNER",
+    "workspaceId": "ws_default",
+    "image": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+    "createdAt": "2026-10-27T17:41:28.474Z"
+  },
+  {
+    "id": "usr_demo_2",
+    "name": "Founder",
+    "email": "founder@reerts.in",
+    "passwordHash": "$2b$10$7BOCEjE2HTRFtKR/foH3cudO7zr3SCLCnV2kdT8d4X8BXWT1KFpM.",
+    "role": "OWNER",
+    "workspaceId": "ws_default",
+    "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+    "createdAt": "2026-10-27T17:41:28.544Z"
+  },
+  {
+    "id": "usr_1793122888554",
+    "name": "Test Founder",
+    "email": "tester@reerts.in",
+    "passwordHash": "$2b$10$yMXTGhs2nnS2CwSjo9PQlu85aIxN79OkG2kJwBUukjChaWDCpzY6G",
+    "image": "https://api.dicebear.com/7.x/initials/svg?seed=Test%20Founder",
+    "role": "OWNER",
+    "workspaceId": "ws_default",
+    "createdAt": "2026-10-27T17:41:28.621Z"
+  },
+  {
+    "id": "usr_1793125518930",
+    "name": "Sahil Shaikh",
+    "email": "itsmesahil357@gmail.com",
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocKsYpdngDXYxaEnHK4Ss6azvKwQ-2E1GjSxQOr-R8oOR7khfgHn=s96-c",
+    "role": "OWNER",
+    "workspaceId": "ws_default",
+    "createdAt": "2026-10-27T18:25:18.930Z"
+  },
+  {
+    "id": "usr_1793125911995",
+    "name": "Iam Sahil",
+    "email": "sahilshaikh9511725321@gmail.com",
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocJQKHPq8lPSgj3v1q7b-UpmZvUepO0LOVqCp15saLVUuEUnkVpg=s96-c",
+    "role": "OWNER",
+    "workspaceId": "ws_default",
+    "createdAt": "2026-10-27T18:31:51.995Z"
+  },
+  {
+    "id": "usr_1793128317413",
+    "name": "Alex Test",
+    "email": "alex_test_unique@posteady.com",
+    "passwordHash": "$2b$10$R7LwmF3G4O6nlSBzptCqQ.za4Fwl7HqlPgy1py5sy1vgQz84bus/2",
+    "image": "https://api.dicebear.com/7.x/initials/svg?seed=Alex%20Test",
+    "role": "OWNER",
+    "workspaceId": "ws_default",
+    "createdAt": "2026-10-27T19:11:57.476Z"
+  },
+  {
+    "id": "usr_1793128459011",
+    "name": "codeswithsahil",
+    "email": "codeswithsahil@gmail.com",
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocICHOJfi5DmtCMWOGdhvmeq9KhIK-WsugI9ICVWkCRMtIb93A=s96-c",
+    "role": "OWNER",
+    "workspaceId": "ws_default",
+    "createdAt": "2026-10-27T19:14:19.011Z"
+  },
+  {
+    "id": "usr_1793182092993",
+    "name": "itsreerts",
+    "email": "itsreerts@gmail.com",
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocL91L-hhSOCJfJeyFMGUl3d2nh9L0fhK7bSJ0t7U53LGkG1Iw=s96-c",
+    "role": "OWNER",
+    "workspaceId": "ws_default",
+    "createdAt": "2026-10-28T10:08:12.993Z"
+  }
+]
