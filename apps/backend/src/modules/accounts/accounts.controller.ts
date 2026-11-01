@@ -42,3 +42,4 @@ export class AccountsController {
     return { success: true, message: `Account ${id} disconnected` };
   }
 }
+

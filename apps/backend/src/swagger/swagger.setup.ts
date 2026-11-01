@@ -24,3 +24,4 @@ export function setupSwagger(app: INestApplication): void {
     customSiteTitle: "Reerts API Docs",
   });
 }
+

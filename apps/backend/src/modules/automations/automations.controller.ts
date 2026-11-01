@@ -22,3 +22,4 @@ export class AutomationsController {
     return { success: true, data };
   }
 }
+

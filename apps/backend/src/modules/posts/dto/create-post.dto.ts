@@ -44,3 +44,4 @@ export class CreatePostDto {
   @IsOptional()
   scheduledAt?: string;
 }
+

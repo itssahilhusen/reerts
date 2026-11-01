@@ -31,3 +31,4 @@ export class AnalyzePersonaDto {
   @IsOptional()
   referenceContent?: string;
 }
+

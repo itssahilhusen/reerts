@@ -15,3 +15,4 @@ export class AutomationsService {
     return AutomationsRepository.toggleActive(id, active);
   }
 }
+

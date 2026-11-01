@@ -53,3 +53,4 @@ export class PostsController {
     return { success: true, message: `Post ${id} deleted successfully` };
   }
 }
+

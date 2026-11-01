@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@11.21.0",
   "scripts": {
-    "dev": "pnpm run --filter @reerts/frontend --filter @reerts/orchestrator --parallel dev",
+    "dev": "pnpm run --filter @reerts/frontend --filter @reerts/backend --filter @reerts/orchestrator --parallel dev",
     "dev:all": "pnpm run --filter ./apps/* --parallel dev",
     "dev:frontend": "pnpm --filter @reerts/frontend run dev",
     "dev:backend": "pnpm --filter @reerts/backend run dev",
@@ -22,6 +22,7 @@
     "db:studio": "pnpm run prisma-studio",
     "db:seed": "pnpm --filter @reerts/commands run seed",
     "docker:dev": "docker compose -f docker-compose.dev.yaml up -d",
+    "preinstall": "npx only-allow pnpm",
     "postinstall": "node -e \"try { require('child_process').execSync('prisma generate --schema=./libraries/database/prisma/schema.prisma', { stdio: 'inherit' }); } catch (e) { console.warn('Note: Prisma client locked by active dev process, generation will refresh on server restart.'); }\""
   },
   "dependencies": {

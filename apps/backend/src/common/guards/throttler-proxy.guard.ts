@@ -13,3 +13,4 @@ export class ThrottlerBehindProxyGuard extends ThrottlerGuard {
     return workspaceId ? `ws_${workspaceId}_${clientIp}` : `ip_${clientIp}`;
   }
 }
+
