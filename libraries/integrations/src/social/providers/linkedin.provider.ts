@@ -54,3 +54,4 @@ export class LinkedInProvider implements ISocialMediaProvider {
     }
   }
 }
+

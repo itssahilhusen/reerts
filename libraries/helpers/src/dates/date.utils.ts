@@ -16,3 +16,4 @@ export class DateUtils {
     return new Date(Date.now() + minutesFromNow * 60 * 1000);
   }
 }
+

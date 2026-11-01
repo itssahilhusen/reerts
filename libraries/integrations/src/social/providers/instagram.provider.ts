@@ -46,3 +46,4 @@ export class InstagramProvider implements ISocialMediaProvider {
     };
   }
 }
+

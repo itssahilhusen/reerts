@@ -20,3 +20,4 @@ export const postQueue = new Queue("reerts-post-publish", {
 export const automationQueue = new Queue("reerts-automation", {
   connection: redisConnection,
 });
+

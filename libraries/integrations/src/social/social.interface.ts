@@ -42,3 +42,4 @@ export interface ISocialMediaProvider {
   deletePost?(tokens: AuthTokens, externalPostId: string): Promise<boolean>;
   getMetrics?(tokens: AuthTokens): Promise<{ followers: number; impressions?: number; engagementRate?: number }>;
 }
+

@@ -30,3 +30,4 @@ export class TikTokProvider implements ISocialMediaProvider {
     };
   }
 }
+

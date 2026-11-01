@@ -44,3 +44,4 @@ volumes:
 networks:
   reerts-network:
     driver: bridge
+
