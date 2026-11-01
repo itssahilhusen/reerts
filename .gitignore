@@ -1,20 +1,40 @@
+# Next.js & Build Artifacts
 .vercel
 node_modules
+.pnpm-store
+.turbo
 .next
 out
 dist
-scratch
+build
 *.tsbuildinfo
+
+# Secrets & Environment Variables
 .env
+.env.*
 .env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+*.cert
+*credential*.json
+*secret*.json
 *.log
 
-# Database Dumps & Caches
+# Database Dumps, Caches & Local Store Data
 *.sql
 *.dump
+*.sqlite
+*.sqlite3
+*.db
 *.cache.json
 prisma/*_cache.json
-src/lib/users-store.json
+**/*-store.json
+**/*-store*.json
+**/sources-store.json
+**/ideas-store.json
+**/users-store.json
 
 # OS & Editor Files
 .DS_Store
@@ -22,16 +42,73 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Reverse Engineering (RE) Artifacts & Analysis Dumps
+# ==============================================================================
+# Reverse Engineering (REA) Artifacts (https://github.com/morluto/rea)
+# ==============================================================================
+.rea/
+rea_*/
+rea-*/
+rea-temp-*/
+rea_out/
+rea_output/
+rea_cache/
+rea_sessions/
+rea_findings/
+
+# REA Evidence & Environment Bundles
+*.evidence.json
+*.evidence.bundle.json
+evidence/
+evidence_bundle/
+*.agentenv.json
+agentenv/
+agent_env/
+
+# REA Obligation Ledgers, Unknowns & Coverage
+*obligation*.json
+*ledger*.json
+*coverage*.json
+unknowns.json
+*unknown*.json
+app_graph.json
+application_graph.json
+*_app_graph.json
+reconstruction/
+reconstruction_*.json
+reconstruction_*.md
+
+# REA Captures & Network Traces
+captures/
+web_captures/
+process_captures/
+network_captures/
+*.har
+*.pcap
+*.pcapng
+*.scenario.json
+
+# REA Decompiled Code, Extracted Sources & Bundles
 chunks/
 chunks*/
 chunks_*/
-scripts/
 extracted/
 decompiled/
 dumps/
-rea-temp-*/
-.rea/
+decompiled_sources/
+extracted_sources/
+recovered_sources/
+web_scripts/
+bundle_analysis/
+*.bundle.js
+*.decompiled.js
+*.decompile
+frida_scripts/
+*.frida.js
+rizin_*/
+cutter_*/
+gdb_*/
+apktool_out/
+decoded_resources/
 
 # RE Inspection JSON, HTML & Text Dumps
 api_strings.json
@@ -61,15 +138,33 @@ carousel_*.json
 carousel_*.txt
 flight_*.txt
 flight_*.json
-target_*.*
 *.flight
 *.flight.txt
+*.rsc
+target_*.*
 target_*.png
 target_*.html
 target_*.json
 target_*.txt
 
-# Root-level Scratch / Extracted JS & HTML
+# Root-level Scratch, Helper Scripts & Test Runners
+scratch/
+scratch_*
+*.scratch.*
+test-*.js
+test_*.js
+inspect-*.js
+inspect_*.js
+verify-*.js
+verify_*.js
+update-*.js
+populate-*.js
+temp-*.js
+temp_*.js
+*.tmp
+*.temp
+
+# Root-level Extracted JS & HTML (protecting real config files)
 /*.js
 !next.config.js
 !tailwind.config.js

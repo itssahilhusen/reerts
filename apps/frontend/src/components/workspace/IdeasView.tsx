@@ -22,9 +22,9 @@ const DEFAULT_RECOMMENDED_CATEGORIES: RecommendedCategory[] = [
     id: "tech",
     nameEn: "Tech & AI",
     sources: [
-      { id: "rec_1", label: "OpenAI Research & News", url: "https://openai.com/news/rss.xml", subscribed: true },
+      { id: "rec_1", label: "OpenAI Research & News", url: "https://openai.com/news/rss.xml", subscribed: false },
       { id: "rec_2", label: "Anthropic Research Updates", url: "https://www.anthropic.com/news/rss", subscribed: false },
-      { id: "rec_3", label: "TechCrunch AI & Robotics", url: "https://techcrunch.com/category/artificial-intelligence/feed/", subscribed: true },
+      { id: "rec_3", label: "TechCrunch AI & Robotics", url: "https://techcrunch.com/category/artificial-intelligence/feed/", subscribed: false },
       { id: "rec_4", label: "Simon Willison Weblog", url: "https://simonwillison.net/atom/everything/", subscribed: false },
       { id: "rec_5", label: "Hacker News Top Stories", url: "https://news.ycombinator.com/rss", subscribed: false },
     ],
@@ -43,7 +43,7 @@ const DEFAULT_RECOMMENDED_CATEGORIES: RecommendedCategory[] = [
     id: "founders",
     nameEn: "Founders & Creators",
     sources: [
-      { id: "rec_10", label: "Paul Graham Essays", url: "http://www.paulgraham.com/rss.html", subscribed: true },
+      { id: "rec_10", label: "Paul Graham Essays", url: "http://www.paulgraham.com/rss.html", subscribed: false },
       { id: "rec_11", label: "Pieter Levels (@levelsio)", url: "https://x.com/levelsio", subscribed: false },
       { id: "rec_12", label: "Sahil Lavingia Writings", url: "https://sahillavingia.com/feed.xml", subscribed: false },
       { id: "rec_13", label: "Indie Hackers Popular", url: "https://feed.indiehackers.world/", subscribed: false },
@@ -60,104 +60,14 @@ const DEFAULT_RECOMMENDED_CATEGORIES: RecommendedCategory[] = [
   },
 ];
 
-const INITIAL_MOCK_SOURCES: ContentSourceItem[] = [
-  {
-    id: "src_1",
-    url: "https://openai.com/news/rss.xml",
-    title: "OpenAI Research & News",
-    status: "active",
-    last_fetched_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    favicon_url: "https://www.google.com/s2/favicons?domain=openai.com&sz=64",
-  },
-  {
-    id: "src_2",
-    url: "https://techcrunch.com/category/artificial-intelligence/feed/",
-    title: "TechCrunch AI",
-    status: "active",
-    last_fetched_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    favicon_url: "https://www.google.com/s2/favicons?domain=techcrunch.com&sz=64",
-  },
-  {
-    id: "src_3",
-    url: "http://www.paulgraham.com/rss.html",
-    title: "Paul Graham Essays",
-    status: "active",
-    last_fetched_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    favicon_url: "https://www.google.com/s2/favicons?domain=paulgraham.com&sz=64",
-  },
-];
-
-const INITIAL_MOCK_ITEMS: IdeaItem[] = [
-  {
-    id: "idea_1",
-    source_id: "src_1",
-    title: "Introducing Canvas: A new interface for working with ChatGPT on writing and code",
-    url: "https://openai.com/index/introducing-canvas/",
-    published_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    source_title: "OpenAI Research & News",
-    source_favicon_url: "https://www.google.com/s2/favicons?domain=openai.com&sz=64",
-    thumbnail_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80",
-    excerpt: "We’re rolling out canvas, a new interface for working with ChatGPT on writing and coding projects that go beyond simple chat.",
-    author: "OpenAI Team",
-  },
-  {
-    id: "idea_2",
-    source_id: "src_2",
-    title: "Why developers are abandoning bloated cloud microservices for modern single binaries",
-    url: "https://techcrunch.com/2026/10/developer-infrastructure-trends/",
-    published_at: new Date(Date.now() - 1000 * 60 * 52).toISOString(),
-    source_title: "TechCrunch AI",
-    source_favicon_url: "https://www.google.com/s2/favicons?domain=techcrunch.com&sz=64",
-    thumbnail_url: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80",
-    excerpt: "Engineering teams are seeing 80% cost reduction and 10x faster deployment loops by moving back to unified monolith architectures.",
-    author: "Alex Wilhelm",
-  },
-  {
-    id: "idea_3",
-    source_id: "src_3",
-    title: "How to Do Great Work: Surprising lessons from 20 years of Y Combinator founders",
-    url: "http://www.paulgraham.com/greatwork.html",
-    published_at: new Date(Date.now() - 1000 * 60 * 195).toISOString(),
-    source_title: "Paul Graham Essays",
-    source_favicon_url: "https://www.google.com/s2/favicons?domain=paulgraham.com&sz=64",
-    thumbnail_url: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&auto=format&fit=crop&q=80",
-    excerpt: "If you want to do great work, the first step is to choose what to work on. The work you choose should have three qualities: natural aptitude, deep interest, and scope for greatness.",
-    author: "Paul Graham",
-  },
-  {
-    id: "idea_4",
-    source_id: "src_1",
-    title: "Evaluating frontier reasoning models: A deep dive into multi-step mathematics and logic",
-    url: "https://openai.com/research/frontier-reasoning-evaluations",
-    published_at: new Date(Date.now() - 1000 * 60 * 320).toISOString(),
-    source_title: "OpenAI Research & News",
-    source_favicon_url: "https://www.google.com/s2/favicons?domain=openai.com&sz=64",
-    thumbnail_url: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&auto=format&fit=crop&q=80",
-    excerpt: "Chain-of-thought processing allows models to dynamically allocate reasoning tokens when faced with complex multi-variable problems.",
-    author: "OpenAI Research",
-  },
-  {
-    id: "idea_5",
-    source_id: "src_2",
-    title: "The $0 to $50k MRR Playbook: Why PLG self-serve loops beat cold outreach for dev tools",
-    url: "https://techcrunch.com/2026/plg-saas-playbook/",
-    published_at: new Date(Date.now() - 1000 * 60 * 480).toISOString(),
-    source_title: "TechCrunch AI",
-    source_favicon_url: "https://www.google.com/s2/favicons?domain=techcrunch.com&sz=64",
-    thumbnail_url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80",
-    excerpt: "Viral organic engineering logs and public benchmarks drove 68% of new paying accounts for the latest batch of breakout developer platforms.",
-    author: "Ron Miller",
-  },
-];
-
 export function IdeasView({ onOpenComposer }: IdeasViewProps) {
   // State
-  const [sources, setSources] = useState<ContentSourceItem[]>(INITIAL_MOCK_SOURCES);
-  const [items, setItems] = useState<IdeaItem[]>(INITIAL_MOCK_ITEMS);
+  const [sources, setSources] = useState<ContentSourceItem[]>([]);
+  const [items, setItems] = useState<IdeaItem[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date(Date.now() - 1000 * 60 * 12));
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
 
   // Modals state
   const [isManageSourcesOpen, setIsManageSourcesOpen] = useState(false);
@@ -178,7 +88,7 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
     fetch("/api/sources")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.sources && data.sources.length > 0) {
+        if (data && Array.isArray(data.sources)) {
           setSources(data.sources);
         }
       })
@@ -187,7 +97,7 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
     fetch("/api/ideas")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.items && data.items.length > 0) {
+        if (data && Array.isArray(data.items)) {
           setItems(data.items);
         }
       })
@@ -196,7 +106,7 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
     fetch("/api/recommended-sources")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data?.categories && data.categories.length > 0) {
+        if (data && Array.isArray(data.categories)) {
           setRecommendedCategories(data.categories);
         }
       })
@@ -239,20 +149,29 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
       };
 
       setSources((prev) => [newSource, ...prev]);
-      toast.success("Source registered successfully!");
+      fetch("/api/recommended-sources")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => d?.categories && setRecommendedCategories(d.categories))
+        .catch(() => {});
+      fetch("/api/ideas")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d && Array.isArray(d.items)) {
+            setItems(d.items);
+          }
+        })
+        .catch(() => {});
+
+      const count = data.itemsCount || (data.items ? data.items.length : 0);
+      toast.success(
+        count > 0
+          ? `Source registered! Fetched ${count} stories ready to read.`
+          : "Source registered successfully!"
+      );
       return true;
     } catch {
-      // Local optimistic fallback
-      const fallbackSource: ContentSourceItem = {
-        id: `src_${Date.now()}`,
-        url,
-        title: url,
-        status: "active",
-        last_fetched_at: new Date().toISOString(),
-      };
-      setSources((prev) => [fallbackSource, ...prev]);
-      toast.success("Source registered (local)");
-      return true;
+      toast.error("Failed to add source");
+      return false;
     }
   };
 
@@ -282,13 +201,28 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
 
     setSources((prev) => prev.filter((s) => s.id !== sourceId));
     setItems((prev) => prev.filter((i) => i.source_id !== sourceId));
+    fetch("/api/recommended-sources")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.categories && setRecommendedCategories(d.categories))
+      .catch(() => {});
     toast.success("Source deleted");
   };
 
   const handleToggleRecommended = async (rec: RecommendedSource) => {
     const isCurrentlySubscribed = rec.subscribed;
     if (isCurrentlySubscribed) {
-      // Delete
+      // Delete from backend and state
+      const targetSource =
+        sources.find((s) => s.id === rec.contentSourceId) ||
+        sources.find((s) => s.url.toLowerCase().replace(/\/$/, "") === rec.url.toLowerCase().replace(/\/$/, ""));
+
+      if (targetSource) {
+        await handleDeleteSource(targetSource.id);
+      } else {
+        setSources((prev) => prev.filter((s) => s.url !== rec.url));
+        setItems((prev) => prev.filter((i) => i.url !== rec.url));
+      }
+
       setRecommendedCategories((prev) =>
         prev.map((cat) => ({
           ...cat,
@@ -297,7 +231,6 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
           ),
         }))
       );
-      setSources((prev) => prev.filter((s) => s.url !== rec.url));
       toast.info(`Removed ${rec.label}`);
     } else {
       // Add
@@ -305,12 +238,14 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
         prev.map((cat) => ({
           ...cat,
           sources: cat.sources.map((s) =>
-            s.id === rec.id ? { ...s, subscribed: true } : s
+            s.id === rec.id ? { ...s, subscribed: false } : s
           ),
         }))
       );
-      await handleAddSource(rec.url);
-      toast.success(`Subscribed to ${rec.label}`);
+      const ok = await handleAddSource(rec.url);
+      if (ok) {
+        toast.success(`Subscribed to ${rec.label}`);
+      }
     }
   };
 
@@ -328,6 +263,13 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
         setLastRefreshedAt(new Date());
         if (data.newItems > 0) {
           toast.success(`Fetched ${data.newItems} new post${data.newItems > 1 ? "s" : ""}!`);
+          const ideasRes = await fetch("/api/ideas");
+          if (ideasRes.ok) {
+            const ideasData = await ideasRes.json();
+            if (ideasData?.items && ideasData.items.length > 0) {
+              setItems(ideasData.items);
+            }
+          }
         } else {
           toast.info("Already up to date. No new posts found.");
         }
@@ -418,6 +360,18 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
 
     await Promise.all(Array.from({ length: Math.min(concurrency, selected.length) }, worker));
     setIsImportingOpml(false);
+    fetch("/api/sources")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.sources && setSources(d.sources))
+      .catch(() => {});
+    fetch("/api/ideas")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.items && setItems(d.items))
+      .catch(() => {});
+    fetch("/api/recommended-sources")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.categories && setRecommendedCategories(d.categories))
+      .catch(() => {});
     toast.success(`Import complete! Added ${result.buckets.success} new sources.`);
   };
 
@@ -431,31 +385,38 @@ export function IdeasView({ onOpenComposer }: IdeasViewProps) {
     toast.success("Draft created in Composer with source benchmark!");
   };
 
-  const relativeLastRefresh = formatDistanceToNow(lastRefreshedAt, { addSuffix: true });
+  const relativeLastRefresh = lastRefreshedAt
+    ? formatDistanceToNow(lastRefreshedAt, { addSuffix: true })
+    : null;
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-background px-4 lg:px-6 py-5 font-sans min-w-0">
       {/* 1. Content Ideas Title Row (Exact match to StudioView position & structure) */}
-      <div className="flex items-center gap-2.5 mb-4 shrink-0">
-        <div className="flex items-center text-foreground">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-7 shrink-0 text-foreground"
-          >
-            <path d="M5 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
-            <path d="M4 4a16 16 0 0 1 16 16" />
-            <path d="M4 11a9 9 0 0 1 9 9" />
-          </svg>
+      <div className="mb-5 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center text-primary/90">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="size-7 sm:size-8 shrink-0 text-primary/90"
+            >
+              <path d="M5 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
+              <path d="M4 4a16 16 0 0 1 16 16" />
+              <path d="M4 11a9 9 0 0 1 9 9" />
+            </svg>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary/90">
+            Content Ideas
+          </h1>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-          Content Ideas
-        </h1>
+        <p className="text-muted-foreground mt-2 text-xs sm:text-sm leading-relaxed max-w-4xl">
+          Add the blogs, YouTube, Instagram, X, Threads, Reddit, and Telegram you check regularly, and we&apos;ll automatically collect their latest posts — then turn anything worth benchmarking into a draft right away.
+        </p>
       </div>
 
       {/* Hidden file input for OPML */}

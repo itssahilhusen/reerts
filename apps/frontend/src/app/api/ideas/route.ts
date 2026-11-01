@@ -1,83 +1,90 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getStoredIdeas, saveStoredIdeas, StoredIdea } from "@/lib/sources-store";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const workspace = await prisma.workspace.findFirst();
-    if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
+    const { searchParams } = new URL(req.url);
+    const sourceId = searchParams.get("source_id");
+    const platform = searchParams.get("platform");
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
+
+    let ideas = getStoredIdeas();
+
+    if (sourceId && sourceId !== "all") {
+      const sourceIds = sourceId.split(",").map((s) => s.trim());
+      ideas = ideas.filter((item) => sourceIds.includes(item.source_id));
     }
 
-    const ideas = await prisma.idea.findMany({
-      where: { workspaceId: workspace.id },
-      orderBy: { createdAt: "desc" },
-    });
+    if (platform && platform !== "all") {
+      ideas = ideas.filter((item) => {
+        const u = item.url.toLowerCase();
+        if (platform === "youtube") return u.includes("youtube.com") || u.includes("youtu.be");
+        if (platform === "x") return u.includes("x.com") || u.includes("twitter.com");
+        if (platform === "reddit") return u.includes("reddit.com");
+        if (platform === "github") return u.includes("github.com");
+        if (platform === "instagram") return u.includes("instagram.com");
+        if (platform === "threads") return u.includes("threads.net") || u.includes("threads.com");
+        if (platform === "linkedin") return u.includes("linkedin.com");
+        if (platform === "telegram") return u.includes("t.me");
+        return true;
+      });
+    }
 
-    const parsed = ideas.map((item) => ({
-      ...item,
-      tags: JSON.parse(item.tags || "[]"),
+    const items = ideas.slice(0, limit);
+
+    // Format for StudioView compatibility as well
+    const studioCompatibleIdeas = items.map((i) => ({
+      id: i.id,
+      title: i.title,
+      excerpt: i.excerpt,
+      content: i.content,
+      sourceType: i.source_title || "Web",
+      viralityScore: 94,
+      tags: ["Trending", "Benchmark"],
+      createdAt: i.published_at,
+      url: i.url,
+      thumbnail_url: i.thumbnail_url,
     }));
 
-    return NextResponse.json({ ideas: parsed });
+    return NextResponse.json({
+      items,
+      ideas: studioCompatibleIdeas,
+      total: ideas.length,
+      nextCursor: ideas.length > limit ? "next" : null,
+    });
   } catch (err: any) {
-    console.warn("GET /api/ideas falling back to mock data:", err.message);
-    const mockIdeas = [
-      {
-        id: "idea_sample_1",
-        title: "Why developers are abandoning bloated cloud microservices for single binaries",
-        excerpt: "An analysis of deployment velocity, cost reduction, and architecture simplification trends in 2026.",
-        sourceType: "AI Engine",
-        viralityScore: 98,
-        tags: ["Architecture", "Engineering", "BuildInPublic"],
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "idea_sample_2",
-        title: "The $0 to $50k MRR Playbook: Why PLG is beating outbound sales",
-        excerpt: "Breaking down how self-serve activation loops drive lower CAC and higher LTV for modern developer tools.",
-        sourceType: "X Viral",
-        viralityScore: 92,
-        tags: ["Growth", "SaaS", "Strategy"],
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-      }
-    ];
-    return NextResponse.json({ ideas: mockIdeas });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const workspace = await prisma.workspace.findFirst();
-    if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
-    }
-
     const body = await req.json();
-    const { title, excerpt, sourceType, viralityScore, tags } = body;
+    const { title, excerpt, source_id, url, source_title, thumbnail_url } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
-    const newIdea = await prisma.idea.create({
-      data: {
-        workspaceId: workspace.id,
-        title,
-        excerpt: excerpt || "",
-        sourceType: sourceType || "AI Engine",
-        viralityScore: viralityScore || 95,
-        tags: JSON.stringify(tags || ["Strategy"]),
-      },
-    });
+    const ideas = getStoredIdeas();
+    const newIdea: StoredIdea = {
+      id: `idea_${Date.now()}`,
+      source_id: source_id || "custom",
+      title,
+      url: url || "https://example.com",
+      published_at: new Date().toISOString(),
+      source_title: source_title || "Manual Source",
+      source_favicon_url: null,
+      thumbnail_url: thumbnail_url || null,
+      excerpt: excerpt || "",
+      author: "Editor",
+    };
 
-    return NextResponse.json({
-      idea: {
-        ...newIdea,
-        tags: JSON.parse(newIdea.tags),
-      },
-    });
+    ideas.unshift(newIdea);
+    saveStoredIdeas(ideas);
+
+    return NextResponse.json({ item: newIdea, idea: newIdea }, { status: 201 });
   } catch (err: any) {
-    console.error("POST /api/ideas error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

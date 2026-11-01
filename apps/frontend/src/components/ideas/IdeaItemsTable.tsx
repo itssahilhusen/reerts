@@ -128,7 +128,7 @@ export function IdeaItemsTable({
                               onClick={() => setActiveMenuId(null)}
                             />
                             <div className="absolute left-2 top-8 z-50 w-40 rounded-lg border border-border bg-popover p-1 shadow-lg text-left animate-in fade-in zoom-in-95">
-                              {item.excerpt && onViewDetail && (
+                              {onViewDetail && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -137,8 +137,8 @@ export function IdeaItemsTable({
                                   }}
                                   className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-popover-foreground hover:bg-accent hover:text-accent-foreground"
                                 >
-                                  <FileText className="size-3.5" />
-                                  <span>Preview</span>
+                                  <FileText className="size-3.5 text-primary" />
+                                  <span>Read Article</span>
                                 </button>
                               )}
                               <a
