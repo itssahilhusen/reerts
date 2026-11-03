@@ -6,8 +6,8 @@
     "seed": "tsx src/seed.ts"
   },
   "dependencies": {
-    "@reerts/database": "*",
-    "@reerts/helpers": "*",
+    "@reerts/database": "workspace:*",
+    "@reerts/helpers": "workspace:*",
     "bcryptjs": "^3.0.3"
   },
   "devDependencies": {

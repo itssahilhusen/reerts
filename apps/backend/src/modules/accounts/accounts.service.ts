@@ -8,7 +8,7 @@ export class AccountsService {
   async getAccounts(workspaceId: string) {
     const accounts = await AccountsRepository.findWorkspaceAccounts(workspaceId);
     // Mask tokens before sending to client
-    return accounts.map((acc) => ({
+    return accounts.map((acc: any) => ({
       ...acc,
       accessToken: acc.accessToken ? "********" : null,
       refreshToken: acc.refreshToken ? "********" : null,

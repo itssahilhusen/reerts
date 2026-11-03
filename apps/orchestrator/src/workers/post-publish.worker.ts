@@ -33,7 +33,7 @@ export function initPostPublishWorker() {
         try {
           const provider = getSocialProvider(platformId);
           const accounts = await AccountsRepository.findWorkspaceAccounts(post.workspaceId);
-          const matchedAccount = accounts.find((a) => a.provider === platformId);
+          const matchedAccount = accounts.find((a: any) => a.provider === platformId);
 
           if (!matchedAccount || !matchedAccount.accessToken) {
             throw new Error(`No connected active account found for ${platformId}`);
