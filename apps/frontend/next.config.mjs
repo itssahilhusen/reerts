@@ -1,12 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir: process.env.NODE_ENV === "production" ? ".next-build" : ".next",
+  output: "standalone",
   experimental: {
-    serverComponentsExternalPackages: [
-      "@remotion/bundler",
-      "@remotion/renderer",
-      "@ffmpeg-installer/ffmpeg",
-      "@ffprobe-installer/ffprobe",
-    ],
+    serverComponentsExternalPackages: ["fluent-ffmpeg"],
   },
   images: {
     remotePatterns: [

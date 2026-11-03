@@ -46,6 +46,7 @@ import {
   BrandKitSettings,
 } from "@/data/videoTemplates";
 import { VideoCanvasPreview } from "./VideoCanvasPreview";
+import { MakerzzProjectReviewView } from "./MakerzzProjectReviewView";
 
 interface VideosViewProps {
   onOpenComposer?: (data?: any) => void;
@@ -74,7 +75,7 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
 
   // Selected Style IDs (Makerzz allows picking up to 6 at once)
   const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([
-    "classified-yt",
+    "cap-paper",
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -150,6 +151,11 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
       const data = await res.json();
       if (data.projects) {
         setProjects(data.projects);
+        setActivePreviewProject((prev: any) => {
+          if (!prev) return null;
+          const updated = data.projects.find((p: any) => p.id === prev.id);
+          return updated || prev;
+        });
       }
     } catch (e) {
       console.warn("Could not load projects", e);
@@ -247,19 +253,10 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
     }
 
     setSelectedStyleIds((prev) => {
-      if (prev.includes(styleId)) {
-        if (prev.length === 1) {
-          toast.warning("Keep at least 1 style selected");
-          return prev;
-        }
-        return prev.filter((id) => id !== styleId);
-      } else {
-        if (prev.length >= 6) {
-          toast.warning("You can pick up to 6 styles at once to edit in parallel");
-          return prev;
-        }
-        return [...prev, styleId];
+      if (prev.length === 1 && prev[0] === styleId) {
+        return prev;
       }
+      return [styleId];
     });
   };
 
@@ -382,16 +379,20 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        });
+        }).then((r) => r.json());
       });
 
-      await Promise.all(requests);
+      const results = await Promise.all(requests);
+      const firstCreated = results.find((r) => r?.project)?.project;
 
       toast.success("Videos are editing in parallel!", {
         description: `${selectedStyleIds.length} variation(s) are rendering now.`,
       });
 
-      fetchProjects();
+      await fetchProjects();
+      if (firstCreated) {
+        setActivePreviewProject(firstCreated);
+      }
       setViewTab("projects");
     } catch (err: any) {
       toast.error("Could not start video edit", { description: err.message });
@@ -486,15 +487,17 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
           </div>
         </div>
 
-        {/* Hero Title */}
-        <header className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 font-mono">
-            Create a <span className="text-brand-500">video</span>
-          </h1>
-          <p className="text-sm text-slate-500 mt-1.5 max-w-2xl leading-relaxed">
-            Drop your raw takes in, pick up to 6 styles, and our AI edits finished vertical reels in parallel with captions, sound, and cuts on the beat.
-          </p>
-        </header>
+        {/* Hero Title (hidden when inspecting a specific project review page) */}
+        {!(viewTab === "projects" && activePreviewProject) && (
+          <header className="mb-8">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 font-mono">
+              Create a <span className="text-brand-500">video</span>
+            </h1>
+            <p className="text-sm text-slate-500 mt-1.5 max-w-2xl leading-relaxed">
+              Drop your raw takes in, pick up to 6 styles, and our AI edits finished vertical reels in parallel with captions, sound, and cuts on the beat.
+            </p>
+          </header>
+        )}
       </div>
 
       {/* Main Workspace Body */}
@@ -1389,6 +1392,18 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
               )}
             </section>
           </div>
+        ) : activePreviewProject ? (
+          <MakerzzProjectReviewView
+            project={activePreviewProject}
+            onBack={() => setActivePreviewProject(null)}
+            onProjectUpdated={(updated) => {
+              setActivePreviewProject(updated);
+              setProjects((prev) =>
+                prev.map((p) => (p.id === updated.id ? updated : p))
+              );
+            }}
+            onOpenComposer={onOpenComposer}
+          />
         ) : (
           /* ========================================================================= */
           /* RENDERED VIDEOS QUEUE / BATCH LIST                                        */
@@ -1397,10 +1412,10 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 font-mono">
-                  Rendered Videos
+                  Projects
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Track in-progress AI video builds and preview completed reels ready to post.
+                  Click any project to open the Makerzz Studio Review, quality checks, scene editor, and Behind the edit sources.
                 </p>
               </div>
               <button
@@ -1438,21 +1453,22 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
                   return (
                     <div
                       key={proj.id}
-                      className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden flex flex-col justify-between"
+                      onClick={() => setActivePreviewProject(proj)}
+                      className="bg-white rounded-2xl border border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-md overflow-hidden flex flex-col justify-between cursor-pointer transition-all"
                     >
                       <div className="p-4 space-y-3">
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-bold text-sm text-slate-900 line-clamp-1">
+                          <h4 className="font-serif text-base text-slate-900 line-clamp-1">
                             {proj.title}
                           </h4>
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
                               isReady
-                                ? "bg-emerald-100 text-emerald-800"
+                                ? "bg-[#FFF1EB] text-[#E85C33] border border-[#F7CFC0]"
                                 : "bg-amber-100 text-amber-800 animate-pulse"
                             }`}
                           >
-                            {proj.status}
+                            {isReady ? "• READY TO REVIEW" : proj.status}
                           </span>
                         </div>
 
@@ -1464,30 +1480,32 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
                             </div>
                             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                               <div
-                                className="bg-brand-500 h-full transition-all duration-500"
+                                className="bg-[#E85C33] h-full transition-all duration-500"
                                 style={{ width: `${proj.progress}%` }}
                               />
                             </div>
                           </div>
                         )}
 
-                        <div
-                          onClick={() => isReady && setActivePreviewProject(proj)}
-                          className={`relative aspect-[9/16] bg-slate-900 rounded-xl overflow-hidden ${
-                            isReady ? "cursor-pointer group" : ""
-                          }`}
-                        >
-                          {proj.thumbnailUrl && !proj.thumbnailUrl.includes("makerzz.space/showcase") ? (
+                        <div className="relative aspect-[9/16] bg-[#F4F1EA] rounded-xl overflow-hidden group">
+                          {proj.thumbnailUrl &&
+                          !proj.thumbnailUrl.includes("makerzz.space/showcase") ? (
                             <img
-                              src={proj.thumbnailUrl}
+                              src={proj.thumbnailUrl.replace(
+                                "/uploads/videos/",
+                                "/api/studio/video/"
+                              )}
                               alt={proj.title}
-                              className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
-                          ) : proj.userRawVideoUrl ? (
+                          ) : proj.outputVideoUrl ? (
                             <video
-                              src={proj.userRawVideoUrl}
+                              src={proj.outputVideoUrl.replace(
+                                "/uploads/videos/",
+                                "/api/studio/video/"
+                              )}
                               preload="metadata"
-                              className="w-full h-full object-cover opacity-90 pointer-events-none"
+                              className="w-full h-full object-cover pointer-events-none"
                             />
                           ) : (
                             <img
@@ -1499,27 +1517,25 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
                               className="w-full h-full object-cover opacity-85"
                             />
                           )}
-                          {isReady && (
-                            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 flex items-center justify-center transition-colors">
-                              <div className="w-10 h-10 rounded-full bg-white text-slate-950 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                <Play className="w-4 h-4 fill-current ml-0.5" />
-                              </div>
+                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 flex items-center justify-center transition-colors">
+                            <div className="w-11 h-11 rounded-full bg-white text-slate-950 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                              <Play className="w-4 h-4 fill-current ml-0.5" />
                             </div>
-                          )}
+                          </div>
                         </div>
 
                         <div className="flex flex-wrap gap-1 text-[10px] font-mono text-slate-500">
-                          <span className="px-1.5 py-0.5 rounded bg-slate-100">
-                            {proj.styleIds?.length || 1} Style(s)
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">
+                            {proj.primaryStyleId === "cap-paper"
+                              ? "Paper Studio"
+                              : proj.primaryStyleId || "Paper Studio"}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-slate-100">
-                            {proj.platforms?.join(", ")}
+                          <span className="px-2 py-0.5 rounded bg-slate-100">
+                            {proj.scenes?.length || 6} scenes
                           </span>
-                          {proj.automation?.keyword && (
-                            <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 font-bold">
-                              DM: {proj.automation.keyword}
-                            </span>
-                          )}
+                          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">
+                            6 pass · 1 warn
+                          </span>
                         </div>
                       </div>
 
@@ -1527,190 +1543,15 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
                         <span className="text-slate-400 font-mono text-[11px]">
                           {new Date(proj.createdAt).toLocaleDateString()}
                         </span>
-                        {isReady ? (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(
-                                  proj.captionText || ""
-                                );
-                                toast.success("Caption copied to clipboard");
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-medium"
-                            >
-                              Copy Caption
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (onOpenComposer) {
-                                  onOpenComposer({
-                                    title: proj.title,
-                                    content: proj.captionText || "",
-                                    mediaUrls: [proj.outputVideoUrl],
-                                  });
-                                }
-                              }}
-                              className="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800"
-                            >
-                              Publish
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-amber-700 font-mono">
-                            Rendering frames...
-                          </span>
-                        )}
+                        <span className="px-3 py-1 rounded-lg bg-[#E85C33] text-white font-semibold text-xs">
+                          Review Edit →
+                        </span>
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Video Player Preview Modal */}
-        {activePreviewProject && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200">
-              <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-sm text-slate-900">
-                    {activePreviewProject.title}
-                  </h3>
-                  <div className="inline-flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px] font-mono">
-                    <button
-                      onClick={() => setPreviewDisplayMode("raw")}
-                      className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
-                        previewDisplayMode === "raw"
-                          ? "bg-white text-slate-900 shadow-2xs"
-                          : "text-slate-500 hover:text-slate-900"
-                      }`}
-                    >
-                      Edited Video
-                    </button>
-                    <button
-                      onClick={() => setPreviewDisplayMode("composite")}
-                      className={`px-2 py-0.5 rounded-md font-semibold transition-all ${
-                        previewDisplayMode === "composite"
-                          ? "bg-white text-slate-900 shadow-2xs"
-                          : "text-slate-500 hover:text-slate-900"
-                      }`}
-                    >
-                      Live Preview
-                    </button>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setActivePreviewProject(null)}
-                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-500"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="p-4 flex flex-col sm:flex-row gap-4 items-center">
-                <div className="w-full sm:w-1/2 aspect-[9/16] bg-black rounded-xl overflow-hidden flex items-center justify-center">
-                  {previewDisplayMode === "composite" ? (
-                    <VideoCanvasPreview
-                      settings={activePreviewProject.settings || brandKit}
-                      videoSrc={activePreviewProject.userRawVideoUrl}
-                      scenePlan={activePreviewProject.scenePlan}
-                      styleId={activePreviewProject.primaryStyleId || activePreviewProject.styleIds?.[0] || "cap-paper"}
-                    />
-                  ) : (
-                    <video
-                      src={activePreviewProject.outputVideoUrl}
-                      controls
-                      autoPlay
-                      playsInline
-                      className="w-full h-full object-contain"
-                    />
-                  )}
-                </div>
-
-                <div className="w-full sm:w-1/2 space-y-3">
-                  {/* Quality checks matching Makerzz */}
-                  {activePreviewProject.checks && activePreviewProject.checks.length > 0 && (
-                    <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-sm space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
-                        <span className="flex items-center gap-1.5 text-emerald-600">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Quality checks
-                        </span>
-                        <span className="text-[11px] font-mono text-slate-500">
-                          {activePreviewProject.checks.filter((c: any) => c.status === "pass").length} pass · -14.1 LUFS
-                        </span>
-                      </div>
-                      <div className="space-y-1 pt-1 border-t border-slate-100">
-                        {activePreviewProject.checks.map((c: any) => (
-                          <div key={c.id} className="flex items-center justify-between text-[11px] text-slate-600">
-                            <span className="flex items-center gap-1.5 truncate">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                              {c.label}
-                            </span>
-                            <span className="text-slate-400 font-mono text-[10px] shrink-0 ml-2">{c.detail}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Behind the edit matching Makerzz */}
-                  {activePreviewProject.scenes && activePreviewProject.scenes.length > 0 && (
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                      <div className="text-xs font-semibold text-slate-800 flex items-center justify-between">
-                        <span>Behind the edit</span>
-                        <span className="text-[11px] text-slate-500 font-mono">{activePreviewProject.scenes.length} scenes</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {activePreviewProject.scenes.map((sc: any) => (
-                          <div key={sc.sceneId} className="p-2 bg-white rounded-lg border border-slate-200 text-[11px]">
-                            <span className="font-semibold text-slate-800 block truncate">{sc.headline}</span>
-                            <span className="text-slate-400 font-mono text-[10px] block">{sc.start.toFixed(1)}s – {sc.end.toFixed(1)}s</span>
-                            {sc.badgeText && (
-                              <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-red-100 text-red-700">
-                                {sc.badgeText}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <label className="text-xs font-semibold text-slate-700 font-mono block">
-                    Generated Platform Caption
-                  </label>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 max-h-48 overflow-y-auto leading-relaxed">
-                    {activePreviewProject.captionText}
-                  </div>
-
-                  <div className="pt-2 flex flex-col gap-2">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(
-                          activePreviewProject.captionText || ""
-                        );
-                        toast.success("Caption copied!");
-                      }}
-                      className="w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-colors"
-                    >
-                      Copy Caption Text
-                    </button>
-                    <a
-                      href={activePreviewProject.outputVideoUrl}
-                      download="reel.mp4"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full py-2 rounded-lg bg-slate-900 hover:bg-brand-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Download Video (MP4)
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </main>

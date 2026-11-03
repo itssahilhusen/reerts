@@ -10,6 +10,13 @@ export interface VideoProjectRecord {
   progress: number;
   styleIds: string[];
   platforms: string[];
+  approvalStatus?: "pending" | "approved" | "changes_requested";
+  timelineNotes?: Array<{
+    id: string;
+    timestampSec: number;
+    note: string;
+    createdAt: string;
+  }>;
   automation?: {
     keyword?: string;
     offer?: string;
@@ -67,8 +74,16 @@ export interface VideoProjectRecord {
   updatedAt: string;
 }
 
-const STORE_PATH = path.join(process.cwd(), "src", "lib", "video-projects.json");
-const BRANDKIT_PATH = path.join(process.cwd(), "src", "lib", "video-brandkit.json");
+function resolveStoreFile(filename: string): string {
+  const candidate1 = path.join(process.cwd(), "apps", "frontend", "src", "lib", filename);
+  if (fs.existsSync(candidate1)) return candidate1;
+  const candidate2 = path.join(process.cwd(), "src", "lib", filename);
+  if (fs.existsSync(candidate2)) return candidate2;
+  return fs.existsSync(path.join(process.cwd(), "apps", "frontend")) ? candidate1 : candidate2;
+}
+
+const STORE_PATH = resolveStoreFile("video-projects.json");
+const BRANDKIT_PATH = resolveStoreFile("video-brandkit.json");
 
 function ensureFile(filePath: string, defaultData: any) {
   try {
@@ -145,4 +160,3 @@ export function saveBrandKit(kit: BrandKitSettings): BrandKitSettings {
   }
   return kit;
 }
-

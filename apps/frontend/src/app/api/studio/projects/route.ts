@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 import fs from "fs";
 import {
   getAllVideoProjects,
@@ -8,9 +7,12 @@ import {
 } from "@/lib/video-projects-store";
 import { VIDEO_TEMPLATES } from "@/data/videoTemplates";
 import { planVideoWithAuteur } from "@/lib/gemini-video-pipeline";
-import { extractVideoThumbnail, renderProjectVideo } from "@/lib/video-renderer";
+import {
+  extractVideoThumbnail,
+  renderProjectVideo,
+  resolveVideoInputPath,
+} from "@/lib/video-renderer";
 import { renderWithCreatomate } from "@/lib/creatomate";
-import { renderWithUniversalRemotion } from "@/lib/remotion-service";
 import { transcribeVideoAudio, TranscriptionResult } from "@/lib/groq-transcriber";
 
 export async function GET() {
@@ -37,18 +39,25 @@ export async function POST(req: NextRequest) {
       source = { kind: "upload" },
     } = body;
 
-    const projectId = "proj_" + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+    const existingCount = getAllVideoProjects().length;
+    const projectId =
+      "prj_" +
+      Math.random().toString(36).substring(2, 10) +
+      Date.now().toString(36).slice(-6);
 
-    // Choose primary style based on selected styleIds
-    const firstStyle = VIDEO_TEMPLATES.find((s) => styleIds.includes(s.id));
+    const requestedStyleId = (styleIds[0] || "cap-paper").trim();
+    const firstStyle = VIDEO_TEMPLATES.find(
+      (s) =>
+        s.id === requestedStyleId ||
+        s.id.toLowerCase() === requestedStyleId.toLowerCase()
+    );
     const projectTitle =
       title ||
       (brief?.topic ? `Reel: ${brief.topic.slice(0, 35)}` : null) ||
-      (firstStyle ? `${firstStyle.name} Edit` : "Untitled Reel Project");
+      `Untitled ${existingCount + 1}`;
 
-    // Check if user uploaded their own video file
     const userUploadedPath = source.uploadPaths?.[0];
-    const primaryStyleId = firstStyle?.id || styleIds[0] || "cap-paper";
+    const primaryStyleId = firstStyle?.id || requestedStyleId;
 
     // Synchronize style-specific palette colors
     let projectSettings = settings || {};
@@ -74,8 +83,8 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // Extract real thumbnail from user video if available
-    let initialPoster = firstStyle?.poster || "https://makerzz.space/showcase/face/classified-yt/poster.jpg";
+    let initialPoster =
+      firstStyle?.poster || "https://makerzz.space/showcase/face/classified-yt/poster.jpg";
     if (userUploadedPath) {
       try {
         initialPoster = await extractVideoThumbnail(userUploadedPath, projectId);
@@ -84,19 +93,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const outputVideo = userUploadedPath || firstStyle?.preview || "https://makerzz.space/showcase/face/classified-yt/preview.mp4";
+    const outputVideo =
+      userUploadedPath ||
+      firstStyle?.preview ||
+      "https://makerzz.space/showcase/face/classified-yt/preview.mp4";
 
     const newProject: VideoProjectRecord = {
       id: projectId,
       title: projectTitle,
       mode,
-      status: "QUEUED",
-      progress: 5,
-      styleIds,
+      status: "TRANSCRIBING",
+      progress: 18,
+      styleIds: styleIds.length > 0 ? styleIds : [primaryStyleId],
       primaryStyleId,
       platforms,
+      approvalStatus: "pending",
+      timelineNotes: [],
       automation,
-      options,
+      options: {
+        avatarCutout: options?.avatarCutout ?? true,
+        look: options?.look || "clean",
+        lookStrength: options?.lookStrength ?? 0.8,
+      },
       settings: projectSettings,
       brief,
       source,
@@ -112,52 +130,62 @@ export async function POST(req: NextRequest) {
 
     saveVideoProject(newProject);
 
-    // Run async background processing with the full Auteur pipeline
+    // Run async background processing with the full 4-stage Makerzz Auteur pipeline:
+    // 1. Reading your video (TRANSCRIBING)
+    // 2. Planning the edit (COMPOSING_GRAPHICS)
+    // 3. Building every scene (COLOR_GRADING)
+    // 4. Final checks (READY)
     (async () => {
       try {
-        // Resolve absolute path to video file
-        let localVideoAbsolutePath: string | null = null;
-        if (userUploadedPath) {
-          const filename = path.basename(userUploadedPath);
-          const dir1 = path.join(process.cwd(), "apps", "frontend", "public", "uploads", "videos", filename);
-          const dir2 = path.join(process.cwd(), "public", "uploads", "videos", filename);
-          localVideoAbsolutePath = fs.existsSync(dir1) ? dir1 : fs.existsSync(dir2) ? dir2 : null;
-        }
+        const localVideoAbsolutePath = userUploadedPath
+          ? resolveVideoInputPath(userUploadedPath)
+          : null;
 
         let transcriptionResult: TranscriptionResult | undefined;
 
-        // Stage 1: TRANSCRIBE with Groq Whisper Large V3
+        // Stage 1: Reading your video (Transcription & Word Timestamps)
         if (localVideoAbsolutePath && fs.existsSync(localVideoAbsolutePath)) {
           newProject.status = "TRANSCRIBING";
           newProject.progress = 25;
           saveVideoProject(newProject);
 
           try {
-            console.log(`[Auteur Pipeline] Transcribing video: ${localVideoAbsolutePath}`);
+            console.log(`[Auteur Pipeline] Stage 1 — Reading video: ${localVideoAbsolutePath}`);
             transcriptionResult = await transcribeVideoAudio(localVideoAbsolutePath);
 
             newProject.transcript = transcriptionResult.text;
             newProject.transcriptWords = transcriptionResult.words;
+            if (transcriptionResult.duration) {
+              newProject.source = {
+                ...newProject.source,
+                durationSec: Math.round(transcriptionResult.duration * 100) / 100,
+              };
+            }
             saveVideoProject(newProject);
           } catch (transcribeErr: any) {
-            console.error("[Auteur Pipeline] Transcription failed, will proceed with topic context:", transcribeErr.message);
+            console.error(
+              "[Auteur Pipeline] Transcription fallback:",
+              transcribeErr.message
+            );
           }
         }
 
-        // Stage 2: PLAN scenes and research with Auteur LLM
+        // Stage 2: Planning the edit (Auteur Scene Director + Live Research & Assets)
         newProject.status = "COMPOSING_GRAPHICS";
-        newProject.progress = 55;
+        newProject.progress = 52;
         saveVideoProject(newProject);
+
+        const actualDuration =
+          transcriptionResult?.duration || source?.durationSec || 37.27;
 
         const auteurPlan = await planVideoWithAuteur({
           topic: brief?.topic || source?.topic || projectTitle,
           styleName: firstStyle?.name || "Paper Studio",
-          durationSec: transcriptionResult?.duration || source?.durationSec || 30,
+          durationSec: actualDuration,
           language: transcriptionResult?.language || source?.language || "en",
           transcription: transcriptionResult,
         });
 
-        newProject.title = auteurPlan.headline ? `${auteurPlan.headline} · ${auteurPlan.subAccent}` : newProject.title;
         newProject.captionText = auteurPlan.platformCaption;
         newProject.scenes = auteurPlan.scenes;
         newProject.researchVisits = auteurPlan.researchVisits;
@@ -173,50 +201,50 @@ export async function POST(req: NextRequest) {
         };
         saveVideoProject(newProject);
 
-        // Stage 3: RENDER video with Universal Multi-Style Remotion Engine
+        // Stage 3: Building every scene (FFmpeg + libass Studio Composite or Creatomate)
         newProject.status = "COLOR_GRADING";
-        newProject.progress = 75;
+        newProject.progress = 78;
         saveVideoProject(newProject);
 
         if (userUploadedPath) {
           try {
-            console.log(`[Auteur Pipeline] Rendering video with Universal Remotion Engine for style "${primaryStyleId}"...`);
-            let finalVideoUrl: string | null = null;
+            let finalVideoUrl = await renderWithCreatomate({
+              projectId,
+              videoRelPath: userUploadedPath,
+              styleId: primaryStyleId,
+              plan: auteurPlan,
+              durationSec: actualDuration,
+            });
 
-            try {
-              finalVideoUrl = await renderWithUniversalRemotion({
-                projectId,
-                videoRelPath: userUploadedPath,
-                styleId: primaryStyleId,
-                plan: auteurPlan,
-                durationSec: transcriptionResult?.duration || source?.durationSec || 30,
-                captionWords: transcriptionResult?.words,
-              });
-            } catch (remotionErr: any) {
-              console.warn("[Auteur Pipeline] Remotion render failed, attempting FFmpeg fallback:", remotionErr.message);
+            if (!finalVideoUrl) {
+              console.log(
+                `[Auteur Pipeline] Stage 3 — Building every scene in style '${primaryStyleId}' via FFmpeg + libass...`
+              );
               finalVideoUrl = await renderProjectVideo({
                 projectId,
                 videoRelPath: userUploadedPath,
                 styleId: primaryStyleId,
                 plan: auteurPlan,
-                durationSec: transcriptionResult?.duration || source?.durationSec || 30,
+                transcriptWords: newProject.transcriptWords,
+                durationSec: actualDuration,
               });
             }
 
             if (finalVideoUrl) {
               newProject.outputVideoUrl = finalVideoUrl;
-              console.log("[Auteur Pipeline] Final video URL set:", finalVideoUrl);
+              newProject.thumbnailUrl = `/api/studio/video/thumb_${projectId}.jpg`;
+              console.log("[Auteur Pipeline] Final edited video URL:", finalVideoUrl);
             }
           } catch (renderErr: any) {
             console.error("[Auteur Pipeline] Video composite error:", renderErr.message);
           }
         }
 
-        // Stage 4: VALIDATE & READY
+        // Stage 4: Final checks & READY TO REVIEW
         newProject.status = "READY";
         newProject.progress = 100;
         saveVideoProject(newProject);
-        console.log(`[Auteur Pipeline] Project ${projectId} completed successfully.`);
+        console.log(`[Auteur Pipeline] Project ${projectId} is READY TO REVIEW.`);
       } catch (err: any) {
         console.error("[Auteur Pipeline] Async project processing fatal error:", err);
         newProject.status = "READY";

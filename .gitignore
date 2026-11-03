@@ -4,6 +4,7 @@ node_modules
 .pnpm-store
 .turbo
 .next
+.next-build
 out
 dist
 build
@@ -12,6 +13,22 @@ bin/
 **/bin/
 *.exe
 storage/
+public/uploads/
+apps/frontend/public/uploads/
+
+# Compressed Archives & Backups
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# AI Studio & Agent Tool Artifacts
+metadata.json
+.aistudio/
+.antigravity/
+public/assets/aistudio/
 
 # Secrets & Environment Variables
 .env
@@ -180,16 +197,6 @@ temp_*.js
 # Extracted reverse engineering bundles
 makerzz_extracted/
 
-# Local Video & Runtime Store Data
-**/video-brandkit.json
-**/video-projects.json
-**/*-brandkit.json
-**/*-projects.json
-**/*-data.json
-**/*-state.json
-**/local-*.json
-**/*.local.json
-
 # Scratch and Test Runners (TS & JS)
 **/test-*.ts
 **/test_*.ts
@@ -198,6 +205,3 @@ test_*.ts
 test-*.js
 test_*.js
 
-# Uploads
-public/uploads/
-apps/frontend/public/uploads/

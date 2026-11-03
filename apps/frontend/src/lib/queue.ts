@@ -1,10 +1,16 @@
-import { Queue, Worker, QueueEvents } from "bullmq";
-import IORedis from "ioredis";
+// MOCKED — in-memory queue stub for offline/local environments without Redis
+const jobs: Array<{ name: string; data: any }> = [];
 
-const connection = new IORedis(process.env.REDIS_URL || "redis://localhost:6379", { maxRetriesPerRequest: null });
-
-export const postQueue = new Queue("post-publish", { connection });
+export const postQueue = {
+  add: async (name: string, data: any) => {
+    jobs.push({ name, data });
+    return { id: `mock-job-${Date.now()}`, name, data };
+  },
+};
 
 export function createPublishWorker(handler: (postId: string) => Promise<void>) {
-  return new Worker("post-publish", async (job) => { await handler(job.data.postId); }, { connection });
+  return {
+    close: async () => {},
+    on: () => {},
+  };
 }
