@@ -43,6 +43,20 @@ const config: Config = {
           DEFAULT: "rgb(var(--card-rgb) / <alpha-value>)",
           foreground: "rgb(var(--card-foreground-rgb) / <alpha-value>)",
         },
+        brand: {
+          50: "#fff7ed",
+          100: "#ffedd5",
+          500: "#f97316",
+          600: "#ea580c",
+          700: "#c2410c",
+        },
+        surface: {
+          DEFAULT: "#ffffff",
+          subtle: "#f8fafc",
+          muted: "#f1f5f9",
+          border: "#e2e8f0",
+          borderDarker: "#cbd5e1",
+        },
         sidebar: {
           DEFAULT: "rgb(var(--sidebar-rgb) / <alpha-value>)",
           foreground: "rgb(var(--sidebar-foreground-rgb) / <alpha-value>)",

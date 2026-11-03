@@ -8,6 +8,10 @@ out
 dist
 build
 *.tsbuildinfo
+bin/
+**/bin/
+*.exe
+storage/
 
 # Secrets & Environment Variables
 .env
@@ -172,3 +176,28 @@ temp_*.js
 !prettier.config.js
 !eslint.config.js
 /*.html
+
+# Extracted reverse engineering bundles
+makerzz_extracted/
+
+# Local Video & Runtime Store Data
+**/video-brandkit.json
+**/video-projects.json
+**/*-brandkit.json
+**/*-projects.json
+**/*-data.json
+**/*-state.json
+**/local-*.json
+**/*.local.json
+
+# Scratch and Test Runners (TS & JS)
+**/test-*.ts
+**/test_*.ts
+test-*.ts
+test_*.ts
+test-*.js
+test_*.js
+
+# Uploads
+public/uploads/
+apps/frontend/public/uploads/

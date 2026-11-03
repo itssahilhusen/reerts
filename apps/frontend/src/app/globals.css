@@ -414,3 +414,58 @@ html, body {
 .contain-size {
   contain: size;
 }
+
+/* Subtle technical corner bracket accents from Raycall AI design */
+.tech-bracket-container {
+  position: relative;
+}
+.tech-bracket-container::before,
+.tech-bracket-container::after {
+  content: '';
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+.tech-corner-tl::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1.5px solid #f97316;
+  border-left: 1.5px solid #f97316;
+}
+.tech-corner-tl::after {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 1.5px solid #f97316;
+  border-left: 1.5px solid #f97316;
+}
+.tech-card {
+  position: relative;
+}
+.tech-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 7px;
+  height: 7px;
+  border-top: 1.5px solid #94a3b8;
+  border-left: 1.5px solid #94a3b8;
+  transition: border-color 0.15s ease;
+}
+.tech-card::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 7px;
+  height: 7px;
+  border-bottom: 1.5px solid #94a3b8;
+  border-right: 1.5px solid #94a3b8;
+  transition: border-color 0.15s ease;
+}
+.tech-card:hover::before,
+.tech-card:hover::after {
+  border-color: #f97316;
+}

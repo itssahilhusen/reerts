@@ -2,10 +2,13 @@ packages:
   - apps/*
   - libraries/*
 allowBuilds:
+  '@google/genai': true
   '@prisma/client': true
   '@prisma/engines': true
   '@scarf/scarf': true
   esbuild: true
   msgpackr-extract: true
   prisma: true
+  protobufjs: true
+  puppeteer: true
   unrs-resolver: true
