@@ -10,6 +10,7 @@ import { VIDEO_TEMPLATES } from "@/data/videoTemplates";
 import { planVideoWithAuteur } from "@/lib/gemini-video-pipeline";
 import { extractVideoThumbnail, renderProjectVideo } from "@/lib/video-renderer";
 import { renderWithCreatomate } from "@/lib/creatomate";
+import { renderWithUniversalRemotion } from "@/lib/remotion-service";
 import { transcribeVideoAudio, TranscriptionResult } from "@/lib/groq-transcriber";
 
 export async function GET() {
@@ -172,25 +173,27 @@ export async function POST(req: NextRequest) {
         };
         saveVideoProject(newProject);
 
-        // Stage 3: RENDER video with multi-track Creatomate or FFmpeg Fallback
+        // Stage 3: RENDER video with Universal Multi-Style Remotion Engine
         newProject.status = "COLOR_GRADING";
         newProject.progress = 75;
         saveVideoProject(newProject);
 
         if (userUploadedPath) {
           try {
-            console.log("[Auteur Pipeline] Attempting Creatomate cloud timeline render...");
-            let finalVideoUrl = await renderWithCreatomate({
-              projectId,
-              videoRelPath: userUploadedPath,
-              styleId: primaryStyleId,
-              plan: auteurPlan,
-              durationSec: transcriptionResult?.duration || source?.durationSec || 30,
-            });
+            console.log(`[Auteur Pipeline] Rendering video with Universal Remotion Engine for style "${primaryStyleId}"...`);
+            let finalVideoUrl: string | null = null;
 
-            // If Creatomate is skipped or failed, fallback to local FFmpeg composite
-            if (!finalVideoUrl) {
-              console.log("[Auteur Pipeline] Falling back to local FFmpeg studio composite...");
+            try {
+              finalVideoUrl = await renderWithUniversalRemotion({
+                projectId,
+                videoRelPath: userUploadedPath,
+                styleId: primaryStyleId,
+                plan: auteurPlan,
+                durationSec: transcriptionResult?.duration || source?.durationSec || 30,
+                captionWords: transcriptionResult?.words,
+              });
+            } catch (remotionErr: any) {
+              console.warn("[Auteur Pipeline] Remotion render failed, attempting FFmpeg fallback:", remotionErr.message);
               finalVideoUrl = await renderProjectVideo({
                 projectId,
                 videoRelPath: userUploadedPath,

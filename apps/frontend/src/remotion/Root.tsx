@@ -1,12 +1,13 @@
 import React from "react";
 import { Composition } from "remotion";
 import { PaperStudio } from "./compositions/PaperStudio";
+import { UniversalReel } from "./compositions/UniversalReel";
 import type { ReelProps } from "./types";
 
 const defaultProps: ReelProps = {
   videoSrc: "/uploads/videos/upl_bxkc7p7_document_6287295426525669257.mp4",
   durationInSeconds: 30,
-  styleId: "paper",
+  styleId: "cap-paper",
   headline: "THE NEW WAY TO",
   subAccent: "SCALE VIDEOS",
   metricLabel: "views this week",
@@ -26,8 +27,17 @@ export const RemotionRoot: React.FC = () => {
   return (
     <>
       <Composition
+        id="UniversalStudio"
+        component={UniversalReel as any}
+        durationInFrames={30 * 30}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={defaultProps}
+      />
+      <Composition
         id="PaperStudio"
-        component={PaperStudio as any}
+        component={UniversalReel as any}
         durationInFrames={30 * 30}
         fps={30}
         width={1080}

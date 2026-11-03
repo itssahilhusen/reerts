@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: [
+      "@remotion/bundler",
+      "@remotion/renderer",
+      "@ffmpeg-installer/ffmpeg",
+      "@ffprobe-installer/ffprobe",
+    ],
+  },
   images: {
     remotePatterns: [
       {
