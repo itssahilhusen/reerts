@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { BrandKitSettings, DEFAULT_BRAND_KIT } from "@/data/videoTemplates";
+import type { LimeSceneBeat } from "./lime-director-schema";
 
 export interface VideoProjectRecord {
   id: string;
@@ -42,12 +43,14 @@ export interface VideoProjectRecord {
     language?: string;
   };
   outputVideoUrl?: string;
+  errorMessage?: string;
   userRawVideoUrl?: string;
   primaryStyleId?: string;
   thumbnailUrl?: string;
   captionText?: string;
   transcript?: string;
   transcriptWords?: Array<{ word: string; start: number; end: number }>;
+  limeBeats?: LimeSceneBeat[];
   researchVisits?: Array<{ url: string; title: string; facts: string[]; status: string }>;
   assets?: Array<{ assetId: string; badge: string; title: string; sourceUrl: string; sceneIds: string[] }>;
   checks?: Array<{ id: string; label: string; status: string; detail?: string }>;

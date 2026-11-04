@@ -1,29 +1,54 @@
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import fs from "fs";
+import os from "os";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import {
   AuteurEditPlan,
   PlannedScene,
-  buildMakerzzReferenceScenes,
 } from "./gemini-video-pipeline";
 import { buildAuteurAssScript, getStyleVisualConfig } from "./auteur-ass-composer";
-import { renderScenePlatePng } from "./auteur-scene-plates";
-
-function getFfmpegPath(): string {
-  if (fs.existsSync("/usr/bin/ffmpeg")) return "/usr/bin/ffmpeg";
-
-  const localBin = path.join(process.cwd(), "bin", "ffmpeg.exe");
-  if (fs.existsSync(localBin)) return localBin;
-
-  const appBin = path.join(process.cwd(), "apps", "frontend", "bin", "ffmpeg.exe");
-  if (fs.existsSync(appBin)) return appBin;
-
-  return "ffmpeg";
-}
+import { getFfmpegPath, getFfprobePath } from "./media-tool-paths";
+import { removeVideoBackgroundWithReplicate } from "./video-background-removal";
+import type { LimeAuteurEditPlan } from "./lime-director-schema";
 
 const ffmpegBinary = getFfmpegPath();
 if (ffmpegBinary && fs.existsSync(ffmpegBinary)) {
   ffmpeg.setFfmpegPath(ffmpegBinary);
+}
+
+const ffprobeBinary = getFfprobePath();
+if (ffprobeBinary && fs.existsSync(ffprobeBinary)) {
+  ffmpeg.setFfprobePath(ffprobeBinary);
+}
+
+const execFileAsync = promisify(execFile);
+
+export async function inspectRenderedVideo(
+  videoPath: string,
+  expectedDurationSec: number
+): Promise<Array<{ id: string; label: string; status: "pass" | "warn"; detail: string }>> {
+  if (!fs.existsSync(videoPath)) throw new Error(`Rendered video was not found: ${videoPath}`);
+  const { stdout } = await execFileAsync(getFfprobePath(), [
+    "-v", "error",
+    "-show_entries", "format=duration:stream=codec_type,width,height,avg_frame_rate",
+    "-of", "json",
+    videoPath,
+  ], { maxBuffer: 1024 * 1024 });
+  const probe = JSON.parse(stdout);
+  const videoStream = probe.streams?.find((stream: any) => stream.codec_type === "video");
+  const audioStream = probe.streams?.find((stream: any) => stream.codec_type === "audio");
+  if (!videoStream) throw new Error("Rendered file contains no video stream.");
+  const actualDuration = Number(probe.format?.duration || 0);
+  const durationPass = actualDuration > 0 && Math.abs(actualDuration - expectedDurationSec) <= 1.25;
+  const portraitPass = videoStream.width === 1080 && videoStream.height === 1920;
+  return [
+    { id: "render_file", label: "Video file decodes", status: "pass", detail: `${videoStream.width}×${videoStream.height}, ${actualDuration.toFixed(2)} s` },
+    { id: "render_duration", label: "Output duration", status: durationPass ? "pass" : "warn", detail: `${actualDuration.toFixed(2)} s rendered; ${expectedDurationSec.toFixed(2)} s expected` },
+    { id: "render_resolution", label: "Vertical output size", status: portraitPass ? "pass" : "warn", detail: `${videoStream.width}×${videoStream.height}; 1080×1920 expected` },
+    { id: "render_audio", label: "Audio stream", status: audioStream ? "pass" : "warn", detail: audioStream ? "An audio stream is present. Loudness and sound design are not measured." : "No audio stream found." },
+  ];
 }
 
 export function getVideosDir(): string {
@@ -62,6 +87,8 @@ export function resolveVideoInputPath(videoRelPath: string): string | null {
       "videos",
       filename
     ),
+    path.join(process.cwd(), videoRelPath),
+    videoRelPath,
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) return c;
@@ -106,11 +133,11 @@ export async function extractVideoThumbnail(
           resolve(`/api/studio/video/${thumbFilename}`);
         })
         .on("error", (err) => {
-          console.error("FFmpeg thumbnail error:", err);
+          console.warn("[FFmpeg Renderer] Thumbnail extraction warning:", err?.message || err);
           resolve(videoRelPath);
         });
     } catch (e: any) {
-      console.error("Thumbnail extraction exception:", e);
+      console.warn("[FFmpeg Renderer] Thumbnail extraction exception:", e?.message || e);
       resolve(videoRelPath);
     }
   });
@@ -120,36 +147,43 @@ export interface RenderProjectOptions {
   projectId: string;
   videoRelPath: string;
   styleId: string;
-  plan?: AuteurEditPlan;
+  plan?: LimeAuteurEditPlan;
   transcriptWords?: Array<{ word: string; start: number; end: number }>;
   headline?: string;
   subAccent?: string;
   durationSec?: number;
+  avatarCutout?: boolean;
 }
 
 /**
  * Normalizes and stretches/tiles the scene list so that every second from 0..limitSec
- * has an active multi-scene graphic plate (split-screen browser proof, full-screen 01/02/03 list,
- * full-screen 3-Node architecture diagram, Dry Erase whiteboard, etc.).
+ * has an active multi-scene graphic plate.
  */
 function prepareRenderScenes(
   rawScenes: PlannedScene[] | undefined,
   limitSec: number
 ): PlannedScene[] {
-  const baseScenes =
-    rawScenes && rawScenes.length >= 6
-      ? rawScenes.map((s) => ({ ...s }))
-      : buildMakerzzReferenceScenes(limitSec);
+  if (!rawScenes || rawScenes.length === 0) {
+    return [
+      {
+        sceneId: "s1",
+        start: 0,
+        end: limitSec,
+        headline: "HOOK",
+        subAccent: "OVERVIEW",
+        objective: "Hook the viewer with the core statement",
+        visualType: "split-hook",
+        badgeText: "KEY TAKEAWAY",
+        onScreenText: ["OVERVIEW", "KEY TAKEAWAY"],
+      },
+    ];
+  }
 
-  // Cap at 10 distinct plates for fast FFmpeg filtergraph execution while covering 0..limitSec
-  const maxPlates = 10;
-  const selected = baseScenes.slice(0, maxPlates);
+  const selected = rawScenes.slice(0, 10).map((s) => ({ ...s }));
   const lastEnd = selected[selected.length - 1]?.end || 37.3;
 
-  // If the video is longer than lastEnd (e.g. 78s), scale scene timestamps proportionally across limitSec
-  // if they were planned for 37.3s, OR if limitSec <= 42s keep exact timestamps and extend final scene to limitSec.
-  if (limitSec > lastEnd + 2) {
-    const scale = limitSec / lastEnd;
+  if (limitSec > lastEnd + 1.5) {
+    const scale = limitSec / Math.max(1, lastEnd);
     return selected.map((sc, idx) => {
       const start = idx === 0 ? 0 : Math.round(sc.start * scale * 100) / 100;
       const end =
@@ -159,13 +193,13 @@ function prepareRenderScenes(
       return {
         ...sc,
         start,
-        end: Math.max(start + 0.8, end),
+        end: Math.max(start + 0.5, end),
       };
     });
   }
 
   return selected.map((sc, idx) => {
-    const start = idx === 0 ? 0 : Math.min(limitSec - 0.5, Math.max(0, sc.start));
+    const start = idx === 0 ? 0 : Math.min(limitSec - 0.4, Math.max(0, sc.start));
     const end =
       idx === selected.length - 1
         ? limitSec
@@ -181,14 +215,13 @@ function prepareRenderScenes(
 /**
  * Composite and render the video into the exact selected Makerzz Studio style (all 56 styles supported)
  * using:
- * 1. `next/og` (`ImageResponse`) 1080x1920 RGBA PNG scene plates for:
- *    - Top Hook Header (Condensed Bold Title + Colored Highlight Box with Italic Serif)
- *    - Split-Screen Browser Proof Cards (`binance.com/zh-CN`, `335,387,860 用户的共同选择`, warning modals, Bitcoin CC BY-SA 4.0 cards)
- *    - Full-Screen `01 / 02 / 03` Numbered Breakdown Lists + Red Stamp Badges (`PAISA GAYA`, `SIRF ITNA`)
- *    - Full-Screen 3-Node Connected Architecture Diagram (`[Binance] -> [FI registered], [Deposit], [Safety]`)
- *    - Style-Specific Chin Boards (Aluminium-framed Dry Erase Whiteboard with blue/red marker text & checkmarks, Receipt Roll thermal tape)
- * 2. FFmpeg multi-input `overlay=enable='between(t,start,end)'` + `libass` synchronized word-by-word seam captions
- * 3. Broadcast audio loudness normalization (-14.1 LUFS, 44.1kHz stereo AAC, H.264 Main Profile Level 4.0)
+ * 1. Base 1080x1920 canvas in the style's exact palette with architectural grid lines.
+ * 2. Speaker framing geometry tailored per style family:
+ *    - Dry Erase & Receipt Roll: Speaker in top window, Whiteboard/Receipt Roll under the chin.
+ *    - Split Explainer / Glitch / Paper Studio / Lime Slides / Sketchbook / Bento Box / etc.:
+ *      Speaker in bottom card, high-impact motion graphics & proof cards on top.
+ * 3. libass vector graphics, stacked headlines, proof badges, timecode, and word-by-word karaoke captions.
+ * 4. Broadcast loudness normalization (-14.1 LUFS, 44.1kHz AAC, H.264 Main Profile Level 4.0).
  */
 export async function renderProjectVideo(
   options: RenderProjectOptions
@@ -212,58 +245,61 @@ export async function renderProjectVideo(
   const outputFilename = `rendered_${projectId}.mp4`;
   const outputPath = path.join(videosDir, outputFilename);
 
-  const limitSec = Math.min(Math.max(durationSec, 5), 90);
+  const limitSec = Math.min(Math.max(durationSec, 3), 120);
   const theme = getStyleVisualConfig(styleId);
   const safeId = projectId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const cutoutPath = options.avatarCutout
+    ? await removeVideoBackgroundWithReplicate(inputPath, projectId)
+    : null;
+  let speakerVideoPath = cutoutPath || inputPath;
+  const cleanupCutout = () => {
+    if (cutoutPath && fs.existsSync(cutoutPath)) {
+      try { fs.unlinkSync(cutoutPath); } catch {}
+    }
+  };
 
-  // 1. Prepare multi-scene timeline and render 1080x1920 RGBA PNG plates via next/og
-  const renderScenes = prepareRenderScenes(plan?.scenes, limitSec);
-  const plateFiles: Array<{ path: string; start: number; end: number }> = [];
-
-  for (let i = 0; i < renderScenes.length; i++) {
-    const sc = renderScenes[i];
-    const platePath = `/tmp/plate_${safeId}_${i}.png`;
+  // High-fidelity Lime Slides Engine matching Makerzz Studio frame-by-frame
+  if (styleId === "limeslides" || styleId === "cap-slides") {
     try {
-      const pngBuf = await renderScenePlatePng({
-        scene: sc,
-        sceneIndex: i,
-        totalScenes: renderScenes.length,
-        theme,
-      });
-      fs.writeFileSync(platePath, pngBuf);
-      plateFiles.push({
-        path: platePath,
-        start: sc.start,
-        end: sc.end,
-      });
-    } catch (plateErr: any) {
-      console.warn(
-        `[FFmpeg Renderer] Could not render scene plate ${i}, skipping plate:`,
-        plateErr?.message || plateErr
-      );
+      console.log("[Video Renderer] Delegating to high-fidelity Lime Slides Engine...");
+      const { renderLimeSlidesVideo } = await import("./lime-slides-engine");
+      try {
+        await renderLimeSlidesVideo({
+          projectId,
+          absVideoPath: speakerVideoPath,
+          outputPath,
+          plan,
+          transcriptWords,
+          durationSec: limitSec,
+          cutoutVideo: Boolean(cutoutPath),
+        });
+      } finally {
+        cleanupCutout();
+      }
+      return `/api/studio/video/${outputFilename}`;
+    } catch (limeErr: any) {
+      cleanupCutout();
+      console.error("[Video Renderer] Lime Slides Engine failed:", limeErr?.message);
+      throw new Error(`Lime Slides render failed: ${limeErr?.message || "unknown renderer error"}`);
     }
   }
 
-  // 2. Write ASS subtitle script to /tmp for synchronized word-by-word seam captions
-  const assFilePath = `/tmp/auteur_${safeId}.ass`;
-  const usePlates = plateFiles.length > 0;
+  const renderScenes = prepareRenderScenes(plan?.scenes, limitSec);
+
+  // 1. Build ASS subtitle script with full multi-scene graphic overlays & karaoke captions
+  const assFilePath = path.join(os.tmpdir(), `auteur_${safeId}.ass`);
   const assContent = buildAuteurAssScript({
     styleId,
     durationSec: limitSec,
     plan: plan ? { ...plan, scenes: renderScenes } : undefined,
     transcriptWords,
-    headlineFallback: options.headline || plan?.headline || "DUNIYA KA SABSE",
-    subAccentFallback:
-      options.subAccent || plan?.subAccent || "Bada Exchange Hack",
-    includeSceneHeaders: !usePlates,
+    headlineFallback: options.headline || plan?.headline || "VIRAL EDIT",
+    subAccentFallback: options.subAccent || plan?.subAccent || "KEY TAKEAWAYS",
+    includeSceneHeaders: true,
   });
   fs.writeFileSync(assFilePath, assContent, "utf8");
 
-  // 3. Speaker framing geometry based on style layoutFamily:
-  // - For Dry Erase (whiteboard_marker) & Receipt Roll (receipt_roll):
-  //   Speaker is framed in the TOP window (x=54, y=130, w=972, h=1020) and the Whiteboard / Receipt Roll sits under their chin (y=1140..1830)!
-  // - For Split-Screen Explainer / Glitch / Paper Studio / Lime Slides / Chalk Talk / etc.:
-  //   Speaker is framed in the BOTTOM window (x=80, y=1275, w=920, h=590) while the top half (y=0..1260) hosts the Hook Header + Browser Proof Card / Coin Card, and full-screen scenes cover 100% of the 1080x1920 frame!
+  // 2. Speaker framing geometry based on style layoutFamily:
   const isChinBoard =
     theme.layoutFamily === "whiteboard_marker" ||
     theme.layoutFamily === "receipt_roll";
@@ -278,45 +314,30 @@ export async function renderProjectVideo(
       ? ",eq=contrast=1.08:saturation=1.04"
       : ",eq=contrast=1.04:saturation=1.05";
 
+  // Properly escape ASS file path for FFmpeg filtergraph on Windows/Linux
+  const safeAssPath = assFilePath.replace(/\\/g, "/").replace(/:/g, "\\:");
+
   return new Promise((resolve, reject) => {
     try {
-      const cmd = ffmpeg().input(inputPath);
-      plateFiles.forEach((pf) => {
-        cmd.input(pf.path);
-      });
-
       const complexFilter: string[] = [
         // Base 1080x1920 @ 30fps canvas in the style's background color
         `color=c=${theme.canvasBgHex}:s=1080x1920:r=30[bg0]`,
-        // Subtle architectural grid lines on the background canvas
+        // Architectural grid lines
         `[bg0]drawbox=x=0:y=1260:w=1080:h=2:color=${theme.gridLineHex}@0.45:t=fill[bg1]`,
         `[bg1]drawbox=x=54:y=0:w=2:h=1920:color=${theme.gridLineHex}@0.35:t=fill[bg2]`,
         `[bg2]drawbox=x=1026:y=0:w=2:h=1920:color=${theme.gridLineHex}@0.35:t=fill[bg]`,
-        // Scale and crop speaker video into the style's speaker window
+        // Scale and crop speaker video
         `[0:v]scale=${spkW}:${spkH}:force_original_aspect_ratio=increase,crop=${spkW}:${spkH},setsar=1${colorFilter}[spk]`,
-        // Overlay speaker window onto canvas
+        // Overlay speaker video onto canvas
         `[bg][spk]overlay=${spkX}:${spkY}:shortest=1[base0]`,
-        // Crisp border around the speaker window
-        `[base0]drawbox=x=${spkX - 2}:y=${spkY - 2}:w=${spkW + 4}:h=${spkH + 4}:color=${theme.cardBorderHex}@0.85:t=3[p0]`,
+        // Style-colored border around the speaker window
+        `[base0]drawbox=x=${spkX - 2}:y=${spkY - 2}:w=${spkW + 4}:h=${spkH + 4}:color=${theme.cardBorderHex}@0.9:t=3[base1]`,
+        // Burn in synchronized word-by-word karaoke captions, stacked headlines, crosshairs & timecode via libass
+        `[base1]ass='${safeAssPath}'[outv]`,
       ];
 
-      // Chain each scene's 1080x1920 RGBA PNG plate with time-gated overlay
-      plateFiles.forEach((pf, idx) => {
-        const inputIdx = idx + 1;
-        const prevLabel = `p${idx}`;
-        const nextLabel = `p${idx + 1}`;
-        const sTime = pf.start.toFixed(2);
-        const eTime = pf.end.toFixed(2);
-        complexFilter.push(
-          `[${prevLabel}][${inputIdx}:v]overlay=0:0:enable='between(t,${sTime},${eTime})'[${nextLabel}]`
-        );
-      });
-
-      const lastPlateLabel = `p${plateFiles.length}`;
-      // Burn in synchronized word-by-word karaoke captions + SMPTE timecode via libass
-      complexFilter.push(`[${lastPlateLabel}]ass=${assFilePath}[outv]`);
-
-      cmd
+      const cmd = ffmpeg()
+        .input(speakerVideoPath)
         .complexFilter(complexFilter)
         .audioFilters("loudnorm=I=-14.1:TP=-2.0:LRA=11,aresample=44100")
         .outputOptions([
@@ -326,9 +347,9 @@ export async function renderProjectVideo(
           "-profile:v main",
           "-level 4.0",
           "-preset veryfast",
-          "-crf 26",
-          "-maxrate 1600k",
-          "-bufsize 3200k",
+          "-crf 25",
+          "-maxrate 1800k",
+          "-bufsize 3600k",
           "-r 30",
           "-pix_fmt yuv420p",
           "-c:a aac",
@@ -341,37 +362,41 @@ export async function renderProjectVideo(
         .output(outputPath)
         .on("start", (commandLine) => {
           console.log(
-            `[FFmpeg Renderer] Running multi-scene composite (${theme.styleName} / ${theme.layoutFamily}, ${plateFiles.length} plates):`,
+            `[FFmpeg Renderer] Running multi-scene composite (${theme.styleName} / ${theme.layoutFamily}):`,
             commandLine
           );
         })
         .on("end", async () => {
-          console.log(
-            `[FFmpeg Renderer] Studio composite finished: ${outputPath}`
-          );
-          // Clean up temporary PNG plates
-          for (const pf of plateFiles) {
-            try {
-              if (fs.existsSync(pf.path)) fs.unlinkSync(pf.path);
-            } catch {}
-          }
+          cleanupCutout();
+          console.log(`[FFmpeg Renderer] Studio composite finished: ${outputPath}`);
           try {
-            // Capture thumbnail at 1.8s from the newly rendered composite video
+            if (fs.existsSync(assFilePath)) fs.unlinkSync(assFilePath);
+          } catch {}
+          try {
             await extractVideoThumbnail(
               `/uploads/videos/${outputFilename}`,
               projectId,
-              "1.8"
+              "1.5"
             );
           } catch {}
           resolve(`/api/studio/video/${outputFilename}`);
         })
         .on("error", (err) => {
+          cleanupCutout();
           console.error("[FFmpeg Renderer] FFmpeg studio render error:", err);
+          try {
+            if (fs.existsSync(assFilePath)) fs.unlinkSync(assFilePath);
+          } catch {}
           reject(err);
-        })
-        .run();
+        });
+
+      cmd.run();
     } catch (e: any) {
+      cleanupCutout();
       console.error("[FFmpeg Renderer] Video rendering exception:", e);
+      try {
+        if (fs.existsSync(assFilePath)) fs.unlinkSync(assFilePath);
+      } catch {}
       reject(e);
     }
   });

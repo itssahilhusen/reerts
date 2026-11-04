@@ -6,7 +6,7 @@ import { promisify } from "util";
 import { GoogleGenAI } from "@google/genai";
 import { LimeSceneBeat } from "./lime-director-schema";
 import { chunkLimeCaptions, assertRealSceneCopy, layoutHeadline } from "./lime-render-utils";
-import { getFfmpegPath } from "./groq-transcriber";
+import { getFfmpegPath } from "./media-tool-paths";
 
 const execFileAsync = promisify(execFile);
 

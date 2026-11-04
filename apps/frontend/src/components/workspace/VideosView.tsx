@@ -83,7 +83,7 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
   const [lookPreset, setLookPreset] = useState("clean");
   const [lookStrength, setLookStrength] = useState(0.8);
-  const [avatarCutout, setAvatarCutout] = useState(true);
+  const [avatarCutout, setAvatarCutout] = useState(false);
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [musicVolume, setMusicVolume] = useState(0.35);
   const [sfxEnabled, setSfxEnabled] = useState(true);
@@ -164,6 +164,22 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
     }
   };
 
+  const handleDeleteProject = async (project: any) => {
+    if (!window.confirm(`Delete "${project.title}"? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/studio/projects/${encodeURIComponent(project.id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not delete video");
+      setProjects((current) => current.filter((item) => item.id !== project.id));
+      setActivePreviewProject((current: any) => current?.id === project.id ? null : current);
+      toast.success("Video deleted");
+    } catch (error: any) {
+      toast.error(error.message || "Could not delete video");
+    }
+  };
+
   const handleSaveBrandKit = async () => {
     try {
       const res = await fetch("/api/studio/me/brandkit", {
@@ -223,7 +239,7 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
         panel2: "#E5E1D8",
         line: "rgba(0,0,0,0.08)",
       }));
-    } else if (styleId === "limeslides" || styleId.includes("lime")) {
+    } else if (styleId === "limeslides" || styleId === "cap-slides" || styleId.includes("lime")) {
       setBrandKit((prev) => ({
         ...prev,
         bg: "#C6FF3D",
@@ -858,6 +874,24 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
                         }
                         className="w-full accent-brand-500"
                       />
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 pt-4 border-t border-slate-100">
+                    <input
+                      id="avatar-cutout"
+                      type="checkbox"
+                      checked={avatarCutout}
+                      onChange={(e) => setAvatarCutout(e.target.checked)}
+                      className="mt-0.5 rounded text-brand-500 accent-brand-500"
+                    />
+                    <div className="space-y-1">
+                      <label htmlFor="avatar-cutout" className="text-xs font-semibold text-slate-700 font-mono">
+                        Remove speaker background
+                      </label>
+                      <p className="text-[11px] leading-relaxed text-slate-500">
+                        Optional. When enabled, the full source clip is sent to Replicate for a transparent cutout (up to 60 seconds). Requires REPLICATE_API_TOKEN on the server.
+                      </p>
                     </div>
                   </div>
 
@@ -1543,9 +1577,23 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
                         <span className="text-slate-400 font-mono text-[11px]">
                           {new Date(proj.createdAt).toLocaleDateString()}
                         </span>
-                        <span className="px-3 py-1 rounded-lg bg-[#E85C33] text-white font-semibold text-xs">
-                          Review Edit →
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleDeleteProject(proj);
+                            }}
+                            className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                            aria-label={`Delete ${proj.title}`}
+                            title="Delete video"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <span className="px-3 py-1 rounded-lg bg-[#E85C33] text-white font-semibold text-xs">
+                            Review Edit →
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );

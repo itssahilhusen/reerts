@@ -9,11 +9,14 @@ import { VIDEO_TEMPLATES } from "@/data/videoTemplates";
 import { planVideoWithAuteur } from "@/lib/gemini-video-pipeline";
 import {
   extractVideoThumbnail,
+  inspectRenderedVideo,
   renderProjectVideo,
   resolveVideoInputPath,
 } from "@/lib/video-renderer";
 import { renderWithCreatomate } from "@/lib/creatomate";
 import { transcribeVideoAudio, TranscriptionResult } from "@/lib/groq-transcriber";
+import { getStyleVisualConfig } from "@/lib/auteur-ass-composer";
+import { planLimeSlides, toAuteurEditPlan, type LimeAuteurEditPlan } from "@/lib/lime-director-schema";
 
 export async function GET() {
   try {
@@ -51,37 +54,29 @@ export async function POST(req: NextRequest) {
         s.id === requestedStyleId ||
         s.id.toLowerCase() === requestedStyleId.toLowerCase()
     );
+    const primaryStyleId = firstStyle?.id || requestedStyleId;
+    const styleCfg = getStyleVisualConfig(primaryStyleId);
+    const isLimeSlides = primaryStyleId === "limeslides" || primaryStyleId === "cap-slides";
+
     const projectTitle =
       title ||
       (brief?.topic ? `Reel: ${brief.topic.slice(0, 35)}` : null) ||
       `Untitled ${existingCount + 1}`;
 
     const userUploadedPath = source.uploadPaths?.[0];
-    const primaryStyleId = firstStyle?.id || requestedStyleId;
+    const cutoutFallback = isLimeSlides && Boolean(options?.avatarCutout) && !process.env.REPLICATE_API_TOKEN;
 
-    // Synchronize style-specific palette colors
-    let projectSettings = settings || {};
-    if (primaryStyleId === "cap-paper" || primaryStyleId.includes("paper")) {
-      projectSettings = {
-        ...projectSettings,
-        bg: projectSettings.bg === "#000000" ? "#F4F1EA" : projectSettings.bg || "#F4F1EA",
-        ink: projectSettings.ink === "#ffffff" ? "#111111" : projectSettings.ink || "#111111",
-        accent: projectSettings.accent === "#AE0006" ? "#AE0006" : projectSettings.accent || "#AE0006",
-        accentHi: projectSettings.accentHi === "#FF3B4E" ? "#F59E0B" : projectSettings.accentHi || "#F59E0B",
-        panel: projectSettings.panel === "#19191b" ? "#FFFFFF" : projectSettings.panel || "#FFFFFF",
-        panel2: projectSettings.panel2 === "#0b0b0c" ? "#E5E1D8" : projectSettings.panel2 || "#E5E1D8",
-        line: "rgba(0,0,0,0.08)",
-      };
-    } else if (primaryStyleId === "limeslides" || primaryStyleId.includes("lime")) {
-      projectSettings = {
-        ...projectSettings,
-        bg: projectSettings.bg === "#000000" ? "#C6FF3D" : projectSettings.bg || "#C6FF3D",
-        ink: projectSettings.ink === "#ffffff" ? "#000000" : projectSettings.ink || "#000000",
-        accent: "#000000",
-        accentHi: "#1A1A1A",
-        panel: "#121214",
-      };
-    }
+    // Synchronize style-specific palette colors for all 56 styles
+    const projectSettings = {
+      bg: "#" + styleCfg.canvasBgHex.replace(/^0x/i, ""),
+      ink: styleCfg.isDarkCanvas ? "#FFFFFF" : "#111111",
+      accent: styleCfg.highlightHex,
+      accentHi: styleCfg.highlightHex,
+      panel: styleCfg.isDarkCanvas ? "#18181B" : "#FFFFFF",
+      panel2: styleCfg.isDarkCanvas ? "#27272A" : "#F4F1EA",
+      line: styleCfg.isDarkCanvas ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+      ...settings,
+    };
 
     let initialPoster =
       firstStyle?.poster || "https://makerzz.space/showcase/face/classified-yt/poster.jpg";
@@ -111,7 +106,9 @@ export async function POST(req: NextRequest) {
       timelineNotes: [],
       automation,
       options: {
-        avatarCutout: options?.avatarCutout ?? true,
+        // Speaker cutout is an optional, paid Replicate operation. Do not enable
+        // it implicitly for Lime Slides so projects work without a server token.
+        avatarCutout: cutoutFallback ? false : options?.avatarCutout ?? false,
         look: options?.look || "clean",
         lookStrength: options?.lookStrength ?? 0.8,
       },
@@ -123,7 +120,7 @@ export async function POST(req: NextRequest) {
       thumbnailUrl: initialPoster,
       captionText: automation?.keyword
         ? `Here is the secret breakdown. Comment "${automation.keyword}" below and I'll DM you the direct link right away! 👇🚀 #contentcreator #reels #automation`
-        : `Behind the scenes of scaling workflows with AI. Drop your thoughts in the comments! 🔥 #ai #reels #viral`,
+        : `Behind the scenes of scaling workflows with AI. Drop your thoughts in the comments! 🔥 #creator #reels #automation`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -163,10 +160,8 @@ export async function POST(req: NextRequest) {
             }
             saveVideoProject(newProject);
           } catch (transcribeErr: any) {
-            console.error(
-              "[Auteur Pipeline] Transcription fallback:",
-              transcribeErr.message
-            );
+            console.error("[Auteur Pipeline] Transcription failed:", transcribeErr.message);
+            throw transcribeErr;
           }
         }
 
@@ -176,18 +171,26 @@ export async function POST(req: NextRequest) {
         saveVideoProject(newProject);
 
         const actualDuration =
-          transcriptionResult?.duration || source?.durationSec || 37.27;
+          transcriptionResult?.duration || source?.durationSec || 15;
 
-        const auteurPlan = await planVideoWithAuteur({
-          topic: brief?.topic || source?.topic || projectTitle,
-          styleName: firstStyle?.name || "Paper Studio",
-          durationSec: actualDuration,
-          language: transcriptionResult?.language || source?.language || "en",
-          transcription: transcriptionResult,
-        });
+        const auteurPlan = isLimeSlides
+          ? toAuteurEditPlan(await planLimeSlides({
+              topic: brief?.topic || source?.topic || projectTitle,
+              transcript: transcriptionResult?.text || brief?.topic || source?.topic || "",
+              transcriptionWords: transcriptionResult?.words || [],
+              durationSec: actualDuration,
+            }))
+          : await planVideoWithAuteur({
+              topic: brief?.topic || source?.topic || projectTitle,
+              styleName: firstStyle?.name || styleCfg.styleName,
+              durationSec: actualDuration,
+              language: transcriptionResult?.language || source?.language || "en",
+              transcription: transcriptionResult,
+            });
 
         newProject.captionText = auteurPlan.platformCaption;
         newProject.scenes = auteurPlan.scenes;
+        if (isLimeSlides) newProject.limeBeats = (auteurPlan as LimeAuteurEditPlan).limeBeats || [];
         newProject.researchVisits = auteurPlan.researchVisits;
         newProject.assets = auteurPlan.assets;
         newProject.checks = auteurPlan.checks;
@@ -208,13 +211,29 @@ export async function POST(req: NextRequest) {
 
         if (userUploadedPath) {
           try {
-            let finalVideoUrl = await renderWithCreatomate({
-              projectId,
-              videoRelPath: userUploadedPath,
-              styleId: primaryStyleId,
-              plan: auteurPlan,
-              durationSec: actualDuration,
-            });
+            let finalVideoUrl: string | null = null;
+            const useLocalRenderer = isLimeSlides || Boolean(newProject.options?.avatarCutout);
+            if (useLocalRenderer) {
+              // Keep Lime Slides on its style renderer. The fixed cloud template does
+              // not support this style or transparent speaker footage.
+              finalVideoUrl = await renderProjectVideo({
+                projectId,
+                videoRelPath: userUploadedPath,
+                styleId: primaryStyleId,
+                plan: auteurPlan,
+                transcriptWords: newProject.transcriptWords,
+                durationSec: actualDuration,
+                avatarCutout: newProject.options?.avatarCutout,
+              });
+            } else {
+              finalVideoUrl = await renderWithCreatomate({
+                projectId,
+                videoRelPath: userUploadedPath,
+                styleId: primaryStyleId,
+                plan: auteurPlan,
+                durationSec: actualDuration,
+              });
+            }
 
             if (!finalVideoUrl) {
               console.log(
@@ -231,12 +250,40 @@ export async function POST(req: NextRequest) {
             }
 
             if (finalVideoUrl) {
+              const renderedPath = resolveVideoInputPath(finalVideoUrl);
+              if (!renderedPath) throw new Error("Renderer returned an output URL, but the rendered file is missing locally.");
+              newProject.checks = await inspectRenderedVideo(renderedPath, actualDuration);
+              if (cutoutFallback) {
+                newProject.checks.push({
+                  id: "speaker_cutout",
+                  label: "Speaker framing",
+                  status: "warn",
+                  detail: "Replicate is not configured, so this Lime Slides render used face-aware framing without background removal.",
+                });
+              }
+              if (isLimeSlides) {
+                const { getLastLimeQualityReport } = await import("@/lib/lime-slides-engine");
+                const limeReport = getLastLimeQualityReport();
+                if (limeReport) {
+                  newProject.checks = [
+                    ...newProject.checks,
+                    ...limeReport.checks,
+                    {
+                      id: "lime_acceptance_metrics",
+                      label: "Lime Slides acceptance metrics",
+                      status: "pass",
+                      detail: `${limeReport.numbers.visualChanges} visual changes; max ${limeReport.numbers.maxCaptionActive} captions active; face inside crop ${limeReport.numbers.faceInsideCropPercent.toFixed(1)}%; motion ${limeReport.numbers.motionCoveragePercent == null ? "unmeasured" : `${limeReport.numbers.motionCoveragePercent.toFixed(1)}%`}; render ${(limeReport.numbers.renderMs / 1000).toFixed(2)}s.`,
+                    },
+                  ];
+                }
+              }
               newProject.outputVideoUrl = finalVideoUrl;
               newProject.thumbnailUrl = `/api/studio/video/thumb_${projectId}.jpg`;
               console.log("[Auteur Pipeline] Final edited video URL:", finalVideoUrl);
             }
           } catch (renderErr: any) {
             console.error("[Auteur Pipeline] Video composite error:", renderErr.message);
+            throw renderErr;
           }
         }
 
@@ -247,8 +294,9 @@ export async function POST(req: NextRequest) {
         console.log(`[Auteur Pipeline] Project ${projectId} is READY TO REVIEW.`);
       } catch (err: any) {
         console.error("[Auteur Pipeline] Async project processing fatal error:", err);
-        newProject.status = "READY";
+        newProject.status = "FAILED";
         newProject.progress = 100;
+        newProject.errorMessage = err?.message || "Video processing failed.";
         saveVideoProject(newProject);
       }
     })();

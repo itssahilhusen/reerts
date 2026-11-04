@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { getVideosDir } from "@/lib/video-renderer";
+import { probeVideoDuration } from "@/lib/groq-transcriber";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +19,7 @@ export async function POST(req: NextRequest) {
       const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const savedFileName = `${uploadId}_${cleanName}`;
 
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "videos");
+      const uploadDir = getVideosDir();
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
@@ -27,6 +29,12 @@ export async function POST(req: NextRequest) {
       const filePath = path.join(uploadDir, savedFileName);
       fs.writeFileSync(filePath, buffer);
 
+      // Probe real video duration
+      let probedDur = 30.0;
+      try {
+        probedDur = await probeVideoDuration(filePath);
+      } catch {}
+
       const publicPath = `/uploads/videos/${savedFileName}`;
 
       return NextResponse.json({
@@ -35,7 +43,7 @@ export async function POST(req: NextRequest) {
           path: publicPath,
           filename: file.name,
           size: file.size,
-          duration: 38.4,
+          duration: probedDur,
           width: 1080,
           height: 1920,
         },
@@ -49,7 +57,7 @@ export async function POST(req: NextRequest) {
       upload: {
         id: uploadId,
         path: body.path || `/uploads/videos/${uploadId}.mp4`,
-        duration: body.duration || 45.0,
+        duration: body.duration || 30.0,
       },
     });
   } catch (err: any) {

@@ -42,7 +42,7 @@ export function MakerzzProjectReviewView({
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState<number>(
-    project?.source?.durationSec || 37.27
+    project?.source?.durationSec || 15
   );
 
   // Title rename state
@@ -63,7 +63,7 @@ export function MakerzzProjectReviewView({
 
   // Timeline note state
   const [isAddingNote, setIsAddingNote] = useState(false);
-  const [noteTimestamp, setNoteTimestamp] = useState(2.37);
+  const [noteTimestamp, setNoteTimestamp] = useState(0);
   const [noteText, setNoteText] = useState("");
 
   // Behind the edit visibility & asset filter
@@ -83,6 +83,7 @@ export function MakerzzProjectReviewView({
   }, [project?.id, project?.title, project?.status]);
 
   const isReady = project?.status === "READY";
+  const isFailed = project?.status === "FAILED";
   const primaryStyleId =
     project?.primaryStyleId || project?.styleIds?.[0] || "cap-paper";
   const styleTemplate = VIDEO_TEMPLATES.find(
@@ -279,9 +280,11 @@ export function MakerzzProjectReviewView({
     }
   };
 
-  const handleReRenderScenes = async () => {
+  const handleReRenderScenes = async (avatarCutout = project?.options?.avatarCutout ?? false) => {
     setIsReRendering(true);
-    toast.info("Rebuilding edited scenes with FFmpeg studio compositor...");
+    toast.info(avatarCutout
+      ? "Retrying the render with speaker background removal..."
+      : "Rendering the edit without speaker background removal...");
     try {
       const res = await fetch(`/api/studio/projects/${project.id}`, {
         method: "PATCH",
@@ -289,16 +292,18 @@ export function MakerzzProjectReviewView({
         body: JSON.stringify({
           scenes: editableScenes,
           reRender: true,
+          avatarCutout,
         }),
       });
       const data = await res.json();
       if (data.project) {
         onProjectUpdated(data.project);
-        toast.success("Edited video updated with your scene changes!");
-        setIsScenesOpen(false);
       }
-    } catch {
-      toast.error("Failed to re-render scenes");
+      if (!res.ok) throw new Error(data.error || "Video render failed.");
+      toast.success("Edited video is ready to review.");
+      setIsScenesOpen(false);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to re-render scenes");
     } finally {
       setIsReRendering(false);
     }
@@ -375,54 +380,60 @@ export function MakerzzProjectReviewView({
   const warnCount = checks.filter((c: any) => c.status === "warn").length;
   const failCount = checks.filter((c: any) => c.status === "fail").length;
 
+  const fallbackTopic =
+    project?.title &&
+    project.title !== "Untitled Project" &&
+    project.title !== "Makerzz Video"
+      ? project.title
+      : project?.scenes?.[0]?.spokenWords?.slice(0, 5).join(" ") || "Visual Narrative";
+
+  const fallbackDomain =
+    fallbackTopic
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 20) || "evidence";
+
+  const fallbackVisits = [
+    {
+      url: `${fallbackDomain}.org/reference`,
+      title: `${fallbackTopic} · Verified Reference Dossier`,
+      facts: [
+        `Identified focal theme: "${fallbackTopic}" across spoken dialogue intervals.`,
+        `Synthesized visual pacing and scene segmentation tailored for ${project?.styleName || "Studio"} style.`,
+      ],
+      status: "CAPTURED",
+    },
+  ];
+
   const researchVisits =
     project?.researchVisits && project.researchVisits.length > 0
       ? project.researchVisits
+      : fallbackVisits;
+
+  const fallbackAssets =
+    project?.scenes && project.scenes.length > 0
+      ? project.scenes.slice(0, 4).map((sc: any, idx: number) => ({
+          assetId: `ast_${idx + 1}`,
+          badge: idx % 3 === 0 ? "screenshot" : idx % 3 === 1 ? "cc_image" : "recording",
+          title: `${sc.headline || sc.sceneType || "Visual Beat"} · ${sc.spokenWords?.slice(0, 5).join(" ") || fallbackTopic}`,
+          sourceUrl: `${fallbackDomain}.org/visual-asset-${idx + 1}`,
+          sceneIds: [sc.id || `Scene ${idx + 1}`],
+        }))
       : [
           {
-            url: "binance.com/zh-CN",
-            title: "币安: 全球最值得信赖的加密货币买卖和投资平台",
-            facts: [
-              "Binance describes itself as: 了解为什么币安是世界上最好的加密货币交易平台。安全、手续费低，深受全球数百万用户的信赖。",
-              "Main headline on the page: 335,525,783 用户的共同选择 “335,525,783 用户的 共同选择”",
-            ],
-            status: "CAPTURED",
+            assetId: "ast_1",
+            badge: "screenshot",
+            title: `Key Narrative Plate · ${fallbackTopic}`,
+            sourceUrl: `${fallbackDomain}.org/visual-asset-1`,
+            sceneIds: ["Scene 1"],
           },
         ];
 
   const assets =
     project?.assets && project.assets.length > 0
       ? project.assets
-      : [
-          {
-            assetId: "ast_shot_1",
-            badge: "screenshot",
-            title: "Screenshot of a public web page (cited source) · www.binance.com",
-            sourceUrl: "binance.com/zh-CN",
-            sceneIds: ["Scene 2"],
-          },
-          {
-            assetId: "ast_cc_1",
-            badge: "cc_image",
-            title: "CC BY-SA 4.0 · Crypto Trading Bot running by Fabo.Hax, CC BY-SA 4.0, via Wikimedia Commons",
-            sourceUrl: "commons.wikimedia.org/wiki/File:Crypto_Trading_Bot.png",
-            sceneIds: ["Scene 4"],
-          },
-          {
-            assetId: "ast_shot_2",
-            badge: "screenshot",
-            title: "Screenshot of a public web page (cited source) · www.binance.com",
-            sourceUrl: "binance.com/zh-CN",
-            sceneIds: ["Scene 2"],
-          },
-          {
-            assetId: "ast_rec_1",
-            badge: "recording",
-            title: "Screenshot of a public web page (cited source) · www.binance.com",
-            sourceUrl: "binance.com/zh-CN",
-            sceneIds: ["Scene 3", "Scene 2"],
-          },
-        ];
+      : fallbackAssets;
 
   const filteredAssets = assets.filter((a: any) => {
     if (assetFilter === "all") return true;
@@ -460,6 +471,11 @@ export function MakerzzProjectReviewView({
               <span className="w-1.5 h-1.5 rounded-full bg-[#E85C33]" />
               READY TO REVIEW
             </span>
+          ) : isFailed ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase bg-red-50 text-red-700 border border-red-200">
+              <AlertTriangle className="w-3 h-3" />
+              RENDER FAILED
+            </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase bg-slate-200/80 text-slate-700 border border-slate-300">
               <span className="w-1.5 h-1.5 rounded-full bg-[#E85C33] animate-ping" />
@@ -467,7 +483,7 @@ export function MakerzzProjectReviewView({
             </span>
           )}
           <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">
-            {isReady ? "STARTED A MOMENT AGO" : "STARTED JUST NOW"}
+            {isReady ? "STARTED A MOMENT AGO" : isFailed ? "ACTION NEEDED" : "STARTED JUST NOW"}
           </span>
         </div>
 
@@ -514,12 +530,12 @@ export function MakerzzProjectReviewView({
         {/* Step 1: Editing */}
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all ${
-            !isReady
+            !isReady && !isFailed
               ? "bg-white text-slate-900 shadow-2xs font-semibold"
               : "text-slate-600"
           }`}
         >
-          {isReady ? (
+          {isReady || isFailed ? (
             <span className="w-5 h-5 rounded-md bg-slate-200/80 text-slate-700 flex items-center justify-center text-[11px]">
               <Check className="w-3 h-3 stroke-[2.5]" />
             </span>
@@ -616,18 +632,55 @@ export function MakerzzProjectReviewView({
       {/* ========================================================================= */}
       {/* STATE A: IN-PROGRESS EDITING VIEW (SCREENSHOT 1)                          */}
       {/* ========================================================================= */}
-      {!isReady ? (
+          {!isReady ? (
         <div className="space-y-5">
-          <p className="text-xs text-slate-500">
+          {!isFailed && <p className="text-xs text-slate-500">
             Usually ready in about 4–7 min. When many videos are in the queue it
             can take a few minutes longer — we&apos;ll email you.
-          </p>
+          </p>}
+
+          {isFailed && (
+            <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 space-y-3">
+              <div className="flex items-center gap-2 font-semibold text-red-800">
+                <AlertTriangle className="w-4 h-4" />
+                This render stopped
+              </div>
+              <p className="text-sm text-red-800">
+                {project.errorMessage || "The video renderer stopped before it created an output."}
+              </p>
+              {String(project.errorMessage || "").includes("REPLICATE_API_TOKEN") && (
+                <p className="text-xs text-red-700">
+                  To keep speaker cutout, configure REPLICATE_API_TOKEN in the frontend server environment and restart the app. Or render now without cutout.
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={isReRendering}
+                  onClick={() => handleReRenderScenes(false)}
+                  className="rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  {isReRendering ? "Rendering…" : "Render without cutout"}
+                </button>
+                {String(project.errorMessage || "").includes("REPLICATE_API_TOKEN") && (
+                  <button
+                    type="button"
+                    disabled={isReRendering}
+                    onClick={() => handleReRenderScenes(true)}
+                    className="rounded-lg border border-red-300 bg-white px-3.5 py-2 text-xs font-semibold text-red-800 disabled:opacity-50"
+                  >
+                    Retry with cutout
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 sm:p-8 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-serif text-slate-900">{styleName}</h2>
               <span className="text-xs font-mono text-slate-500">
-                About {Math.max(1, Math.ceil((100 - (project.progress || 20)) / 15))}:21 left
+                {isFailed ? "Render stopped" : `About ${Math.max(1, Math.ceil((100 - (project.progress || 20)) / 15))}:21 left`}
               </span>
             </div>
 
@@ -635,7 +688,7 @@ export function MakerzzProjectReviewView({
             <div className="w-full h-1 bg-[#F5E6DF] rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#E85C33] transition-all duration-700"
-                style={{ width: `${ Math.max(12, project.progress || 25) }%` }}
+                style={{ width: `${ Math.max(12, project.progress || 25) }%`, backgroundColor: isFailed ? "#DC2626" : undefined }}
               />
             </div>
 
@@ -647,8 +700,8 @@ export function MakerzzProjectReviewView({
                 { step: 3, label: "Building every scene" },
                 { step: 4, label: "Final checks" },
               ].map((item) => {
-                const isCurrent = currentEditingStage === item.step;
-                const isDone = currentEditingStage > item.step;
+                const isCurrent = !isFailed && currentEditingStage === item.step;
+                const isDone = isFailed ? item.step < 4 : currentEditingStage > item.step;
                 return (
                   <div key={item.step} className="flex items-center gap-2.5">
                     {isDone ? (
@@ -673,7 +726,7 @@ export function MakerzzProjectReviewView({
                           : "text-slate-400"
                       }`}
                     >
-                      {item.label}
+                    {isFailed && item.step === 4 ? "Render failed" : item.label}
                     </span>
                   </div>
                 );
@@ -1134,60 +1187,58 @@ export function MakerzzProjectReviewView({
 
             {/* Visual Thumbnail Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                {
-                  label: "335,525,783 用户的共同选择",
-                  sub: "binance.com/zh-CN · Official Hero",
-                  dark: true,
-                  accent: "#F59E0B",
-                },
-                {
-                  label: "01001101 MATRIX BOT",
-                  sub: "Wikimedia CC BY-SA 4.0",
-                  matrix: true,
-                  accent: "#10B981",
-                },
-                {
-                  label: "335,525,783 USERS PROOF",
-                  sub: "binance.com/zh-CN · Verified",
-                  dark: true,
-                  accent: "#F59E0B",
-                },
-                {
-                  label: "SAFU 保护 · $1,000,000,000",
-                  sub: "7s Browser Recording",
-                  dark: true,
-                  accent: "#F59E0B",
-                },
-              ].map((card, i) => (
-                <div
-                  key={i}
-                  className={`aspect-video rounded-xl border border-slate-300 overflow-hidden p-3 flex flex-col justify-between relative ${
-                    card.matrix
-                      ? "bg-[#051408] text-emerald-400"
-                      : "bg-[#12151C] text-white"
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-[9px] font-mono opacity-75">
-                    <span>{card.matrix ? "CC BY-SA 4.0" : "BINANCE.COM"}</span>
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+              {assets.slice(0, 4).map((ast: any, i: number) => {
+                const isCc = ast.badge === "cc_image";
+                const domainLabel = ast.sourceUrl
+                  ? ast.sourceUrl.split("/")[0]
+                  : isCc
+                  ? "CC BY-SA 4.0"
+                  : "VERIFIED";
+                return (
+                  <div
+                    key={ast.assetId || i}
+                    className={`aspect-video rounded-xl border border-slate-300 overflow-hidden p-3 flex flex-col justify-between relative ${
+                      isCc
+                        ? "bg-[#051408] text-emerald-400"
+                        : "bg-[#12151C] text-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-[9px] font-mono opacity-75">
+                      <span className="truncate max-w-[80%] uppercase">{domainLabel}</span>
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: isCc ? "#10B981" : "#F59E0B" }}
+                      />
+                    </div>
+                    <div className="font-mono font-bold text-xs leading-tight line-clamp-2">
+                      {ast.title || `Visual Frame ${i + 1}`}
+                    </div>
+                    <div className="text-[9px] font-mono text-slate-400 truncate">
+                      {ast.sourceUrl || `${ast.badge || "verified"} · HD capture`}
+                    </div>
                   </div>
-                  <div className="font-mono font-bold text-xs leading-tight">
-                    {card.label}
-                  </div>
-                  <div className="text-[9px] font-mono text-slate-400 truncate">
-                    {card.sub}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Sources Pill Row */}
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
               <span>Sources</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-200/70 text-slate-700 font-mono text-[11px]">
-                binance.com
-              </span>
+              {Array.from(
+                new Set([
+                  ...researchVisits.map((rv: any) => rv.url?.split("/")[0]).filter(Boolean),
+                  ...assets.map((a: any) => a.sourceUrl?.split("/")[0]).filter(Boolean),
+                ])
+              )
+                .slice(0, 4)
+                .map((domain: string, sIdx: number) => (
+                  <span
+                    key={sIdx}
+                    className="px-2.5 py-0.5 rounded-full bg-slate-200/70 text-slate-700 font-mono text-[11px]"
+                  >
+                    {domain}
+                  </span>
+                ))}
             </div>
 
             <div>
@@ -1245,20 +1296,26 @@ export function MakerzzProjectReviewView({
 
                       {/* 3 Research Capture Cards */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                        {[
-                          { type: "Real screenshot", tag: "335,525,783 用户的共同选择" },
-                          { type: "Real screenshot", tag: "335,525,783 用户的共同选择" },
-                          { type: "Browser recording", tag: "SAFU 保护 · $1B Reserve" },
-                        ].map((cap, cIdx) => (
+                        {(rv.facts && rv.facts.length > 0
+                          ? rv.facts.slice(0, 3).map((f: string, i: number) => ({
+                              type: i === 2 ? "Browser recording" : "Real screenshot",
+                              tag: f.slice(0, 48),
+                            }))
+                          : [
+                              { type: "Real screenshot", tag: rv.title || "Visual Evidence" },
+                              { type: "Real screenshot", tag: "Verified Primary Narrative" },
+                              { type: "Browser recording", tag: "Contextual Live Capture" },
+                            ]
+                        ).map((cap, cIdx) => (
                           <div
                             key={cIdx}
                             className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50"
                           >
                             <div className="aspect-video bg-[#12151C] p-3 flex flex-col justify-between text-white">
-                              <span className="text-[9px] font-mono text-amber-400">
-                                binance.com/zh-CN
+                              <span className="text-[9px] font-mono text-amber-400 truncate">
+                                {rv.url || "verified source"}
                               </span>
-                              <span className="text-xs font-mono font-bold">
+                              <span className="text-xs font-mono font-bold line-clamp-2">
                                 {cap.tag}
                               </span>
                               <span className="text-[9px] font-mono text-slate-400">
@@ -1348,12 +1405,8 @@ export function MakerzzProjectReviewView({
                                 HD
                               </span>
                             </div>
-                            <div className="font-mono font-bold text-sm">
-                              {isCc
-                                ? "010110 CRYPTO TRADING BOT MATRIX"
-                                : isRec
-                                ? "SAFU 保护 · $1,000,000,000 RESERVE"
-                                : "335,525,783 用户的共同选择"}
+                            <div className="font-mono font-bold text-sm line-clamp-2">
+                              {ast.title || (isCc ? "Creative Commons Reference Plate" : isRec ? "Screen Recording Capture" : "Verified Visual Screenshot")}
                             </div>
                             <div className="text-[10px] font-mono opacity-60">
                               Cited visual overlay

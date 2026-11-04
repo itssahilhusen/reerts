@@ -73,37 +73,54 @@ export async function PATCH(
     if (body.reRender && project.userRawVideoUrl) {
       project.status = "COLOR_GRADING";
       project.progress = 72;
+      delete project.errorMessage;
+      if (typeof body.avatarCutout === "boolean") {
+        project.options = { ...project.options, avatarCutout: body.avatarCutout };
+      }
       saveVideoProject(project);
 
       try {
+        const topH1 = project.scenePlan?.headline || project.scenes?.[0]?.headline || project.title?.toUpperCase() || "KEY INSIGHT";
+        const topH2 = project.scenePlan?.subAccent || project.scenes?.[0]?.subAccent || "THE BREAKDOWN";
+
         const renderedUrl = await renderProjectVideo({
           projectId: project.id,
           videoRelPath: project.userRawVideoUrl,
           styleId: project.primaryStyleId || project.styleIds?.[0] || "cap-paper",
           plan: {
-            headline: project.scenePlan?.headline || project.scenes?.[0]?.headline || "SO BHAI SAAP",
-            subAccent: project.scenePlan?.subAccent || project.scenes?.[0]?.subAccent || "NEWS TOP NE",
-            metricLabel: project.scenePlan?.metricLabel || "verified users",
-            metricCount: project.scenePlan?.metricCount || 335525783,
-            steps: project.scenePlan?.steps || ["Hook", "Proof", "Takeaway"],
+            headline: topH1,
+            subAccent: topH2,
+            metricLabel: project.scenePlan?.metricLabel || "verified insights",
+            metricCount: project.scenePlan?.metricCount || 3,
+            steps: project.scenePlan?.steps || [
+              `01 / ${project.scenes?.[0]?.headline || "Hook"}`,
+              `02 / ${project.scenes?.[1]?.headline || "Insight"}`,
+              `03 / ${project.scenes?.[2]?.headline || "Takeaway"}`,
+            ],
             platformCaption: project.captionText || "",
             scenes: (project.scenes as any) || [],
             researchVisits: (project.researchVisits as any) || [],
             assets: (project.assets as any) || [],
             checks: (project.checks as any) || [],
             cadenceWordsPerMin: 145,
+            limeBeats: project.limeBeats,
           },
           transcriptWords: project.transcriptWords,
           durationSec: project.source?.durationSec || 37.27,
+          avatarCutout: project.options?.avatarCutout,
         });
         project.outputVideoUrl = renderedUrl;
         project.thumbnailUrl = `/api/studio/video/thumb_${project.id}.jpg?t=${Date.now()}`;
-      } catch (e: any) {
-        console.error("Re-render failed:", e.message);
-      } finally {
         project.status = "READY";
         project.progress = 100;
         saveVideoProject(project);
+      } catch (e: any) {
+        console.error("Re-render failed:", e.message);
+        project.status = "FAILED";
+        project.progress = 100;
+        project.errorMessage = e?.message || "Video render failed.";
+        saveVideoProject(project);
+        return NextResponse.json({ project, error: project.errorMessage }, { status: 500 });
       }
     }
 
