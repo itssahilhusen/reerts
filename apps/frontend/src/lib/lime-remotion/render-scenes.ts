@@ -28,13 +28,33 @@ async function runPool<T>(items: T[], concurrency: number, work: (item: T, index
   await Promise.all(workers);
 }
 
+function resolveLimeRemotionEntryPoint(): string {
+  const relativeEntry = path.join("src", "lib", "lime-remotion", "Root.tsx");
+  const candidates = new Set<string>();
+
+  for (const start of [process.cwd(), __dirname]) {
+    let current = path.resolve(start);
+    for (let depth = 0; depth < 6; depth++) {
+      candidates.add(path.join(current, relativeEntry));
+      candidates.add(path.join(current, "apps", "frontend", relativeEntry));
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }
+  }
+
+  const entryPoint = [...candidates].find((candidate) => fs.existsSync(candidate));
+  if (entryPoint) return entryPoint;
+  throw new Error(`Lime Slides Remotion entry point was not found. Checked: ${[...candidates].join(", ")}`);
+}
+
 export async function renderLimeSceneClips(
   scenes: TimedLimeScene[],
   projectId: string
 ): Promise<{ clips: RenderedLimeScene[]; directory: string; renderMs: number }> {
   const startedAt = Date.now();
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), `lime-remotion-${projectId}-`));
-  const entryPoint = path.join(process.cwd(), "apps", "frontend", "src", "lib", "lime-remotion", "Root.tsx");
+  const entryPoint = resolveLimeRemotionEntryPoint();
   // Scene visuals are inline SVG. Avoid copying the app's upload-heavy public
   // directory into each temporary Remotion bundle.
   const publicDir = path.join(directory, "public");
