@@ -6,6 +6,24 @@ export const LIME_SCENE_TYPES = ["HALO_SPEAKER", "FULL_GRAPHIC", "SPLIT_SPEAKER"
 export const LIME_ILLUSTRATIONS = ["phone", "carousel", "line_chart", "gear_diagram", "swatches", "calendar", "video_player", "editor_window", "primitive"] as const;
 export const LIME_SPEAKER_MODES = ["halo", "split", "full", "hidden"] as const;
 
+export const limeAssetRequestSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("screenshot"),
+    url: z.string().url(),
+    query: z.string().trim().max(120).optional(),
+    highlightBox: z.object({ x: z.number().nonnegative(), y: z.number().nonnegative(), width: z.number().positive(), height: z.number().positive() }).optional(),
+  }),
+  z.object({ type: z.literal("photo"), query: z.string().trim().min(2).max(120) }),
+  z.object({ type: z.literal("logo"), query: z.string().trim().min(2).max(80) }),
+  z.object({ type: z.literal("none") }),
+]);
+
+export type LimeAssetRequest =
+  | { type: "screenshot"; url: string; query?: string; highlightBox?: { x: number; y: number; width: number; height: number } }
+  | { type: "photo"; query: string }
+  | { type: "logo"; query: string }
+  | { type: "none" };
+
 export const limeBeatSchema = z.object({
   startMs: z.number().int().nonnegative(),
   endMs: z.number().int().positive(),
@@ -17,6 +35,7 @@ export const limeBeatSchema = z.object({
   speakerMode: z.enum(LIME_SPEAKER_MODES),
   emphasisWords: z.array(z.string().trim().min(1)).max(4).default([]),
   assetIntent: z.string().trim().max(140).optional(),
+  assetRequest: limeAssetRequestSchema.optional(),
   stepIndex: z.number().int().positive().max(99).optional(),
 }).refine((beat) => beat.endMs > beat.startMs, { message: "Beat endMs must be after startMs." })
   .refine((beat) => beat.sceneType !== "NUMBERED_STEP" || beat.stepIndex != null, { message: "NUMBERED_STEP requires an enumerated stepIndex." })
@@ -342,8 +361,8 @@ export async function planLimeSlides(params: {
           temperature: 0.35,
           response_format: { type: "json_object" },
           messages: [
-            { role: "system", content: "You are a short-form motion design director. Return JSON with exactly one beat for each supplied transcript segment, in the same order. Preserve each segment's startMs and endMs. Make original ALL-CAPS headlines of at most three words that summarize that segment. Do not repeat adjacent headlines or illustrations, and do not keep a layout for more than 1.5 seconds. Choose NUMBERED_STEP and set stepIndex only when the spoken segment explicitly enumerates a step (first/second/step one). Use an illustration enum from phone, carousel, line_chart, gear_diagram, swatches, calendar, video_player, editor_window, primitive. Never use generic placeholder labels." },
-            { role: "user", content: JSON.stringify({ segments: segments.map(({ startMs, endMs, text }) => ({ startMs, endMs, text })), previousValidationError: previousError, requiredBeatShape: "{beats:[{startMs,endMs,sceneType,headline,badge?,illustration,illustrationProps,speakerMode,emphasisWords,assetIntent?,stepIndex?}]}" }) },
+            { role: "system", content: "You are a short-form motion design director. Return JSON with exactly one beat for each supplied transcript segment, in the same order. Preserve each segment's startMs and endMs. Make original ALL-CAPS headlines of at most three words that summarize that segment. Do not repeat adjacent headlines or illustrations, and do not keep a layout for more than 1.5 seconds. Choose NUMBERED_STEP and set stepIndex only when the spoken segment explicitly enumerates a step (first/second/step one). Request a real asset only when it improves the scene: assetRequest is {type:'screenshot',url,highlightBox?}, {type:'photo',query}, {type:'logo',query}, or {type:'none'}. Only request screenshots of public https pages. Use an illustration enum from phone, carousel, line_chart, gear_diagram, swatches, calendar, video_player, editor_window, primitive. Never use generic placeholder labels." },
+            { role: "user", content: JSON.stringify({ segments: segments.map(({ startMs, endMs, text }) => ({ startMs, endMs, text })), previousValidationError: previousError, requiredBeatShape: "{beats:[{startMs,endMs,sceneType,headline,badge?,illustration,illustrationProps,speakerMode,emphasisWords,assetIntent?,assetRequest:{type,url|query,highlightBox?},stepIndex?}]}" }) },
           ],
         }),
         signal: AbortSignal.timeout(60_000),
@@ -374,7 +393,7 @@ export async function reviseLimeBeat(beat: LimeSceneBeat, failures: string[], se
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: "Revise one Lime Slides beat. Keep its startMs and endMs. Return a JSON object with a valid original ALL-CAPS headline of at most three words, meaningful illustration, valid sceneType and speakerMode. Set stepIndex and NUMBERED_STEP only for explicit spoken enumerations. Address every validation failure." },
-        { role: "user", content: JSON.stringify({ segmentWords: segmentText, currentBeat: beat, failures, requiredFields: ["startMs", "endMs", "sceneType", "headline", "illustration", "illustrationProps", "speakerMode", "emphasisWords"] }) },
+        { role: "user", content: JSON.stringify({ segmentWords: segmentText, currentBeat: beat, failures, requiredFields: ["startMs", "endMs", "sceneType", "headline", "illustration", "illustrationProps", "speakerMode", "emphasisWords", "assetRequest"] }) },
       ],
     }),
     signal: AbortSignal.timeout(45_000),

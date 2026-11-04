@@ -3,8 +3,9 @@ import path from "path";
 import os from "os";
 import { exec, execFile } from "child_process";
 import { promisify } from "util";
-import type { LimeAuteurEditPlan, LimeSceneBeat } from "./lime-director-schema";
-import { reviseLimeBeat } from "./lime-director-schema";
+import type { LimeAssetRequest, LimeAuteurEditPlan, LimeSceneBeat } from "./lime-director-schema";
+import { limeAssetRequestSchema, reviseLimeBeat } from "./lime-director-schema";
+import { resolveLimeAssets, resolveLimeAsset, type LimeResolvedAsset } from "./lime-assets";
 import { assertRealSceneCopy, chunkLimeCaptions } from "./lime-render-utils";
 import { buildFaceAwareSpeakerFilter, detectSpeakerFaceTrack } from "./lime-face-tracking";
 import { getFfmpegPath, getFfprobePath } from "./media-tool-paths";
@@ -66,6 +67,8 @@ export interface LimeSceneData {
   steps?: string[];
   visualAssetUrl?: string;
   visualAssetDataUri?: string;
+  assetRequest?: LimeAssetRequest;
+  resolvedAsset?: LimeResolvedAsset | null;
   renderSceneType?: LimeSceneType;
   speakerMode?: LimeSpeakerMode;
   illustration?: LimeIllustrationName;
@@ -698,6 +701,7 @@ export function mapPlanToLimeScenes(
       beatIndex: index,
       badgeLabel: beat.badge,
       assetIntent: beat.assetIntent,
+      assetRequest: beat.assetRequest as LimeAssetRequest | undefined,
     }));
   }
   const realCopy = (value?: string) => {
@@ -985,6 +989,8 @@ export async function renderLimeSlidesVideo(options: {
   const renderStartedAt = Date.now();
 
   const limeScenes = mapPlanToLimeScenes(plan, durationSec, transcriptWords || []);
+  const resolvedAssets = await resolveLimeAssets(limeScenes.map((scene) => scene.assetRequest));
+  resolvedAssets.forEach((asset, index) => { limeScenes[index].resolvedAsset = asset; });
   const remotionScenes: TimedLimeScene[] = limeScenes.map((scene, index) => ({
     sceneType: scene.renderSceneType || (scene.sceneType === "closer_cta" ? "CTA" : scene.sceneType === "split_steps" ? "NUMBERED_STEP" : scene.sceneType === "split_chart" || scene.sceneType === "split_metric" || scene.sceneType === "browser_card" ? "FULL_GRAPHIC" : "HALO_SPEAKER"),
     speakerMode: scene.speakerMode || (scene.sceneType === "closer_cta" || scene.sceneType === "split_steps" || scene.sceneType === "split_chart" || scene.sceneType === "split_metric" ? "hidden" : "halo"),
@@ -994,6 +1000,7 @@ export async function renderLimeSlidesVideo(options: {
     illustrationProps: scene.illustrationProps || {},
     emphasisWords: scene.emphasisWords || [],
     stepNumber: scene.stepNumber,
+    asset: scene.resolvedAsset || undefined,
     start: scene.start,
     end: scene.end,
     durationInFrames: Math.max(1, Math.round((scene.end - scene.start) * 30)),
@@ -1082,6 +1089,7 @@ export async function renderLimeSlidesVideo(options: {
     headline: scene.headline, badge: scene.badge, illustration: scene.illustration,
     illustrationProps: scene.illustrationProps, speakerMode: scene.speakerMode,
     emphasisWords: scene.emphasisWords, assetIntent: limeScenes[index].assetIntent || scene.headline,
+    assetRequest: limeScenes[index].assetRequest,
   }));
 
   try {
@@ -1096,6 +1104,7 @@ export async function renderLimeSlidesVideo(options: {
           ...remotionScenes[index], sceneType: revised.sceneType, speakerMode: revised.speakerMode,
           headline: revised.headline, badge: revised.badge, illustration: revised.illustration,
           illustrationProps: revised.illustrationProps, emphasisWords: revised.emphasisWords,
+          asset: revised.assetRequest ? await resolveLimeAsset(limeAssetRequestSchema.parse(revised.assetRequest) as LimeAssetRequest) || undefined : undefined,
         };
       }
       const retried = await renderLimeSceneClips(retryIndexes.map((index) => remotionScenes[index]), `${safeId}-retry-${retry + 1}`);
