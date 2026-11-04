@@ -10,7 +10,7 @@ function resolveInstallerPath(packageName: string): string | null {
   }
 }
 
-function findWindowsPnpmBinary(packagePrefix: string, binaryName: string): string | null {
+function findWindowsPnpmBinary(packagePrefix: string, installerScope: string, binaryName: string): string | null {
   const searchRoots = new Set<string>();
   for (const start of [process.cwd(), __dirname]) {
     let current = path.resolve(start);
@@ -36,7 +36,7 @@ function findWindowsPnpmBinary(packagePrefix: string, binaryName: string): strin
         pnpmRoot,
         packageDirectory,
         "node_modules",
-        "@ffmpeg-installer",
+        installerScope,
         "win32-x64",
         binaryName
       );
@@ -50,7 +50,7 @@ export function getFfmpegPath(): string {
   const installed = resolveInstallerPath("@ffmpeg-installer/ffmpeg");
   if (installed) return installed;
   if (process.platform === "win32") {
-    const pnpmBinary = findWindowsPnpmBinary("@ffmpeg-installer+ffmpeg@", "ffmpeg.exe");
+    const pnpmBinary = findWindowsPnpmBinary("@ffmpeg-installer+ffmpeg@", "@ffmpeg-installer", "ffmpeg.exe");
     if (pnpmBinary) return pnpmBinary;
     const candidates = [
       path.join(process.cwd(), "bin", "ffmpeg.exe"),
@@ -67,7 +67,7 @@ export function getFfprobePath(): string {
   const installed = resolveInstallerPath("@ffprobe-installer/ffprobe");
   if (installed) return installed;
   if (process.platform === "win32") {
-    const pnpmBinary = findWindowsPnpmBinary("@ffprobe-installer+ffprobe@", "ffprobe.exe");
+    const pnpmBinary = findWindowsPnpmBinary("@ffprobe-installer+ffprobe@", "@ffprobe-installer", "ffprobe.exe");
     if (pnpmBinary) return pnpmBinary;
     const candidates = [
       path.join(process.cwd(), "bin", "ffprobe.exe"),
