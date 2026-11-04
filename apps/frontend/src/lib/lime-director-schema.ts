@@ -17,7 +17,10 @@ export const limeBeatSchema = z.object({
   speakerMode: z.enum(LIME_SPEAKER_MODES),
   emphasisWords: z.array(z.string().trim().min(1)).max(4).default([]),
   assetIntent: z.string().trim().max(140).optional(),
-}).refine((beat) => beat.endMs > beat.startMs, { message: "Beat endMs must be after startMs." });
+  stepIndex: z.number().int().positive().max(99).optional(),
+}).refine((beat) => beat.endMs > beat.startMs, { message: "Beat endMs must be after startMs." })
+  .refine((beat) => beat.sceneType !== "NUMBERED_STEP" || beat.stepIndex != null, { message: "NUMBERED_STEP requires an enumerated stepIndex." })
+  .refine((beat) => beat.stepIndex == null || beat.sceneType === "NUMBERED_STEP", { message: "Only enumerated steps may use stepIndex." });
 
 export const limeDirectorSchema = z.object({
   beats: z.array(limeBeatSchema).min(1).max(160),
@@ -26,6 +29,12 @@ export const limeDirectorSchema = z.object({
 export type LimeSceneBeat = z.infer<typeof limeBeatSchema>;
 export type LimeDirectorPlan = z.infer<typeof limeDirectorSchema>;
 export type LimeAuteurEditPlan = AuteurEditPlan & { limeBeats?: LimeSceneBeat[] };
+export interface LimeTranscriptSegment {
+  startMs: number;
+  endMs: number;
+  text: string;
+  words: TranscriptionResult["words"];
+}
 
 export function toAuteurEditPlan(plan: LimeDirectorPlan): LimeAuteurEditPlan {
   const scenes: PlannedScene[] = plan.beats.map((beat, index) => ({
@@ -60,29 +69,132 @@ export function toAuteurEditPlan(plan: LimeDirectorPlan): LimeAuteurEditPlan {
   };
 }
 
-export function conceptHeadline(text: string): string {
-  const normalized = text.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, " ").trim();
-  const conceptMap: Array<[RegExp, string]> = [
-    [/conversation|talk|speak|say|chat|network/, "START BETTER CONVERSATIONS"],
-    [/autom|workflow|agent|bot|process/, "AUTOMATE CREATOR WORKFLOWS"],
-    [/grow|growth|revenue|sales|profit|scale/, "BUILD SUSTAINABLE GROWTH"],
-    [/audience|follower|community|creator/, "BUILD A COMMUNITY"],
-    [/design|color|colour|brand|visual/, "BUILD VISUAL BRANDS"],
-    [/calendar|schedule|publish|post|consisten/, "PLAN CONTENT AHEAD"],
-    [/video|edit|clip|reel|content/, "CREATE BETTER VIDEOS"],
-    [/phone|mobile|app|screen/, "IMPROVE MOBILE EXPERIENCES"],
-    [/email|newsletter|inbox/, "GROW THROUGH EMAIL"],
-    [/money|cost|budget|price|spend/, "CONTROL CONTENT COSTS"],
-    [/time|hour|minute|fast|quick/, "SAVE CREATION TIME"],
-  ];
-  return conceptMap.find(([pattern]) => pattern.test(normalized))?.[1]
-    || "MAKE BETTER CONTENT";
+const STOP_WORDS = new Set("a an and are as at be been but by can could did do does for from had has have he her here hers him his how i if in into is it its just me my no not of on or our out she so than that the their them then there these they this those through to up us was we were what when where which who why will with would you your".split(" "));
+const STEP_WORDS: Record<string, number> = {
+  first: 1, one: 1, second: 2, two: 2, third: 3, three: 3, fourth: 4, four: 4,
+  fifth: 5, five: 5, sixth: 6, six: 6, seventh: 7, seven: 7, eighth: 8, eight: 8,
+  ninth: 9, nine: 9, tenth: 10, ten: 10,
+};
+
+function cleanWord(value: string) {
+  return value.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}'’-]+$/gu, "").trim();
 }
 
-export function illustrationForConcept(text: string): LimeSceneBeat["illustration"] {
+function groupText(words: TranscriptionResult["words"]) {
+  return words.map((word) => word.word.trim()).filter(Boolean).join(" ").replace(/\s+([,.;!?])/g, "$1");
+}
+
+function splitLongSegment(words: TranscriptionResult["words"]): Array<TranscriptionResult["words"]> {
+  if (words.length < 2) return [words];
+  const segments: TranscriptionResult["words"][] = [];
+  let remaining = [...words];
+  while (remaining.length) {
+    const start = remaining[0].start;
+    const fitting = remaining.map((word, index) => ({ word, index }))
+      .filter(({ word }) => word.end - start <= 2.5);
+    if (fitting.length === remaining.length) {
+      segments.push(remaining);
+      break;
+    }
+    let cutIndex = fitting.length ? fitting[fitting.length - 1].index : 0;
+    const clauseIndex = fitting.filter(({ word }) => /[,;:]$/.test(word.word.trim())).at(-1)?.index;
+    if (clauseIndex != null && clauseIndex > 0) cutIndex = clauseIndex;
+    const chunk = remaining.slice(0, cutIndex + 1);
+    if (!chunk.length) break;
+    segments.push(chunk);
+    remaining = remaining.slice(cutIndex + 1);
+  }
+  return segments.filter((segment) => segment.length > 0);
+}
+
+function mergeShortSegments(segments: Array<TranscriptionResult["words"]>) {
+  const merged = segments.map((segment) => [...segment]);
+  for (let index = 0; index < merged.length;) {
+    const segment = merged[index];
+    const duration = segment[segment.length - 1].end - segment[0].start;
+    if (duration >= .8 || merged.length === 1) { index++; continue; }
+    const canMergeNext = index + 1 < merged.length
+      && merged[index + 1][merged[index + 1].length - 1].end - segment[0].start <= 2.5;
+    const canMergePrevious = index > 0
+      && segment[segment.length - 1].end - merged[index - 1][0].start <= 2.5;
+    if (canMergeNext) {
+      merged[index] = [...segment, ...merged[index + 1]];
+      merged.splice(index + 1, 1);
+    } else if (canMergePrevious) {
+      merged[index - 1] = [...merged[index - 1], ...segment];
+      merged.splice(index, 1);
+      index = Math.max(0, index - 1);
+    } else index++;
+  }
+  return merged;
+}
+
+/** Split on sentence punctuation and pauses, then merge/split to keep beats usable. */
+export function segmentLimeTranscript(
+  inputWords: TranscriptionResult["words"],
+  durationSec: number,
+  transcript = ""
+): LimeTranscriptSegment[] {
+  const maxDuration = Math.max(.1, durationSec);
+  let words = inputWords.filter((word) => Number.isFinite(word.start) && Number.isFinite(word.end) && word.end > word.start)
+    .map((word) => ({ ...word, start: Math.max(0, word.start), end: Math.min(maxDuration, word.end) }))
+    .filter((word) => word.end > word.start)
+    .sort((a, b) => a.start - b.start);
+
+  if (!words.length && transcript.trim()) {
+    const rawWords = transcript.trim().split(/\s+/);
+    const durationPerWord = maxDuration / Math.max(1, rawWords.length);
+    words = rawWords.map((word, index) => ({ word, start: index * durationPerWord, end: Math.min(maxDuration, (index + 1) * durationPerWord) }));
+  }
+  if (!words.length) return [];
+
+  const sentenceGroups: Array<TranscriptionResult["words"]> = [];
+  let current: TranscriptionResult["words"] = [];
+  for (const word of words) {
+    const previous = current[current.length - 1];
+    const pause = previous ? word.start - previous.end : 0;
+    if (current.length && (pause > .35 || /[.!?]["')\]]*$/.test(previous.word.trim()))) {
+      sentenceGroups.push(current);
+      current = [];
+    }
+    current.push(word);
+  }
+  if (current.length) sentenceGroups.push(current);
+
+  const bounded = sentenceGroups.flatMap(splitLongSegment);
+  const merged = mergeShortSegments(bounded);
+  return merged.map((segment) => ({
+    startMs: Math.max(0, Math.round(segment[0].start * 1000)),
+    endMs: Math.max(Math.round(segment[0].start * 1000) + 1, Math.round(segment[segment.length - 1].end * 1000)),
+    text: groupText(segment),
+    words: segment,
+  }));
+}
+
+function localHeadline(segment: LimeTranscriptSegment, previousHeadline?: string) {
+  const frequency = new Map<string, { count: number; order: number }>();
+  for (const [order, entry] of segment.words.entries()) {
+    const token = cleanWord(entry.word).toLowerCase();
+    if (!token || STOP_WORDS.has(token)) continue;
+    const existing = frequency.get(token);
+    frequency.set(token, { count: (existing?.count || 0) + 1, order: existing?.order ?? order });
+  }
+  const ranked = [...frequency.entries()].sort((a, b) => b[1].count - a[1].count || a[1].order - b[1].order).map(([token]) => token);
+  if (!ranked.length) {
+    const first = segment.words.map((word) => cleanWord(word.word)).find(Boolean) || "VIDEO";
+    ranked.push(first.toLowerCase());
+  }
+  const candidates: string[] = [];
+  for (let count = Math.min(3, ranked.length); count >= 1; count--) {
+    for (let start = 0; start + count <= ranked.length; start++) candidates.push(ranked.slice(start, start + count).join(" ").toUpperCase());
+  }
+  const distinct = candidates.find((headline) => headline !== previousHeadline);
+  return (distinct || candidates[0] || "VIDEO").slice(0, 40);
+}
+
+function illustrationForWords(text: string): LimeSceneBeat["illustration"] {
   const value = text.toLowerCase();
-  if (/conversation|talk|speak|say|chat|network|social/.test(value)) return "phone";
-  if (/phone|mobile|app|social|heart|like/.test(value)) return "phone";
+  if (/conversation|talk|speak|chat|network|social/.test(value)) return "phone";
   if (/carousel|swipe|slide|story/.test(value)) return "carousel";
   if (/chart|grow|growth|increase|metric|revenue|sales/.test(value)) return "line_chart";
   if (/workflow|autom|process|system|tool/.test(value)) return "gear_diagram";
@@ -93,9 +205,43 @@ export function illustrationForConcept(text: string): LimeSceneBeat["illustratio
   return "primitive";
 }
 
-function wordAt(words: TranscriptionResult["words"], timeSec: number) {
-  return words.find((word) => word.start <= timeSec && word.end >= timeSec)
-    || words.reduce<typeof words[number] | undefined>((best, word) => !best || Math.abs(word.end - timeSec) < Math.abs(best.end - timeSec) ? word : best, undefined);
+function findStepIndex(text: string): number | undefined {
+  const match = text.toLowerCase().match(/\b(?:step|number)\s+(one|two|three|four|five|six|seven|eight|nine|ten|\d{1,2})\b|\b(first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+(?:step|thing|tip|point)\b/i);
+  if (!match) return undefined;
+  const token = (match[1] || match[2]).toLowerCase();
+  return STEP_WORDS[token] || (Number(token) > 0 && Number(token) <= 99 ? Number(token) : undefined);
+}
+
+const FALLBACK_LAYOUTS: LimeSceneBeat["sceneType"][] = ["HALO_SPEAKER", "FULL_GRAPHIC", "SPLIT_SPEAKER", "SPEAKER_STICKER"];
+const FALLBACK_ILLUSTRATIONS: LimeSceneBeat["illustration"][] = ["phone", "carousel", "line_chart", "gear_diagram", "swatches", "calendar", "video_player", "editor_window", "primitive"];
+const SPEAKER_MODE: Record<LimeSceneBeat["sceneType"], LimeSceneBeat["speakerMode"]> = {
+  HALO_SPEAKER: "halo", FULL_GRAPHIC: "hidden", SPLIT_SPEAKER: "split",
+  SPEAKER_STICKER: "full", NUMBERED_STEP: "hidden", CTA: "hidden",
+};
+
+function deterministicBeat(segment: LimeTranscriptSegment, index: number, previous?: LimeSceneBeat): LimeSceneBeat {
+  const stepIndex = findStepIndex(segment.text);
+  const sameRun = previous && previous.sceneType === FALLBACK_LAYOUTS[index % FALLBACK_LAYOUTS.length];
+  const sceneType = stepIndex != null ? "NUMBERED_STEP"
+    : (sameRun ? FALLBACK_LAYOUTS[(index + 1) % FALLBACK_LAYOUTS.length] : FALLBACK_LAYOUTS[index % FALLBACK_LAYOUTS.length]);
+  let illustration = illustrationForWords(segment.text);
+  if (illustration === previous?.illustration) {
+    illustration = FALLBACK_ILLUSTRATIONS.find((candidate) => candidate !== previous.illustration && candidate !== illustration)
+      || FALLBACK_ILLUSTRATIONS[(index + 1) % FALLBACK_ILLUSTRATIONS.length];
+  }
+  return limeBeatSchema.parse({
+    startMs: segment.startMs,
+    endMs: segment.endMs,
+    sceneType,
+    headline: localHeadline(segment, previous?.headline),
+    badge: stepIndex == null ? undefined : `STEP ${stepIndex}`,
+    illustration,
+    illustrationProps: { concept: segment.text.slice(0, 120) },
+    speakerMode: SPEAKER_MODE[sceneType],
+    emphasisWords: [],
+    assetIntent: segment.text.slice(0, 120),
+    stepIndex,
+  });
 }
 
 export function buildFallbackLimePlan(
@@ -103,86 +249,71 @@ export function buildFallbackLimePlan(
   words: TranscriptionResult["words"],
   durationSec: number
 ): LimeDirectorPlan {
-  const totalMs = Math.max(800, Math.round(durationSec * 1000));
-  const beats: LimeSceneBeat[] = [];
-  const layoutCycle: LimeSceneBeat["sceneType"][] = ["HALO_SPEAKER", "FULL_GRAPHIC", "SPLIT_SPEAKER", "FULL_GRAPHIC", "SPEAKER_STICKER", "NUMBERED_STEP"];
-  for (let startMs = 0, index = 0; startMs < totalMs; index++) {
-    const nextTarget = Math.min(totalMs, startMs + 1000);
-    const nearest = words.filter((word) => word.end * 1000 >= startMs + 700 && word.end * 1000 <= startMs + 1300)
-      .reduce<typeof words[number] | undefined>((best, word) => !best || Math.abs(word.end * 1000 - nextTarget) < Math.abs(best.end * 1000 - nextTarget) ? word : best, undefined);
-    const endMs = index === Math.ceil(totalMs / 1000) - 1 ? totalMs : Math.max(startMs + 800, Math.min(totalMs, Math.round((nearest?.end || nextTarget / 1000) * 1000)));
-    const context = words.filter((word) => word.start * 1000 < endMs && word.end * 1000 > startMs).map((word) => word.word).join(" ") || transcript;
-    const sceneType = endMs >= totalMs ? "CTA" : layoutCycle[index % layoutCycle.length];
-    const localHeadline = conceptHeadline(context);
-    const localIllustration = illustrationForConcept(context);
-    const speakerMode: LimeSceneBeat["speakerMode"] = sceneType === "HALO_SPEAKER" ? "halo"
-      : sceneType === "SPLIT_SPEAKER" ? "split"
-      : sceneType === "SPEAKER_STICKER" ? "full" : "hidden";
-    beats.push({
-      startMs,
-      endMs,
-      sceneType,
-      headline: localHeadline === "MAKE BETTER CONTENT" ? conceptHeadline(transcript) : localHeadline,
-      badge: sceneType === "CTA" ? "LINK IN BIO" : undefined,
-      illustration: sceneType === "CTA" ? "primitive" : localIllustration === "primitive" ? illustrationForConcept(transcript) : localIllustration,
-      illustrationProps: { concept: conceptHeadline(context) },
-      speakerMode,
-      emphasisWords: [],
-      assetIntent: context.slice(0, 120),
-    });
-    startMs = endMs;
-  }
-  if (beats.length) {
-    const remainder = totalMs - beats[beats.length - 1].startMs;
-    if (remainder < 700 && beats.length > 1) {
-      beats[beats.length - 2].endMs = totalMs;
-      beats.pop();
-    }
-  }
+  const segments = segmentLimeTranscript(words, durationSec, transcript);
+  const beats = segments.map((segment, index) => deterministicBeat(segment, index, undefined));
   return limeDirectorSchema.parse({ beats });
 }
 
-function normalizeBeats(plan: LimeDirectorPlan, words: TranscriptionResult["words"], durationSec: number, transcript: string): LimeDirectorPlan {
-  const totalMs = Math.round(durationSec * 1000);
-  const count = Math.max(1, Math.round(durationSec));
-  const source = [...plan.beats].sort((a, b) => a.startMs - b.startMs);
-  const boundaries = [0];
-  for (let index = 1; index < count; index++) {
-    const target = totalMs * index / count;
-    const previous = boundaries[index - 1];
-    const min = previous + 800;
-    const max = Math.min(totalMs - (count - index) * 800, previous + 1200);
-    const candidates = words.filter((word) => word.end * 1000 >= min && word.end * 1000 <= max);
-    const nearest = candidates.reduce<typeof words[number] | undefined>((best, word) => !best || Math.abs(word.end * 1000 - target) < Math.abs(best.end * 1000 - target) ? word : best, undefined);
-    boundaries.push(Math.round(nearest?.end ? nearest.end * 1000 : Math.max(min, Math.min(max, target))));
+function beatSequenceFailures(beat: LimeSceneBeat, previous?: LimeSceneBeat, priorSameLayoutMs = 0) {
+  const failures: string[] = [];
+  if (!previous) return failures;
+  if (beat.headline.toLowerCase() === previous.headline.toLowerCase()) failures.push("Adjacent beats must have different headlines.");
+  if (beat.illustration === previous.illustration) failures.push("Adjacent beats must use different illustrations.");
+  const sameLayoutDuration = beat.sceneType === previous.sceneType ? priorSameLayoutMs + beat.endMs - beat.startMs : 0;
+  if (sameLayoutDuration > 1500) failures.push("Do not keep the same layout for more than 1.5 seconds; change this beat's sceneType.");
+  return failures;
+}
+
+/** Snap timing to the segment's word edges without rewriting any planner-authored visual field. */
+export function snapLimeBeatToSegment(beat: Record<string, unknown>, segment: LimeTranscriptSegment) {
+  return { ...beat, startMs: segment.startMs, endMs: segment.endMs };
+}
+
+export async function validateAndSnapBeats(
+  rawBeats: unknown[],
+  segments: LimeTranscriptSegment[]
+): Promise<LimeDirectorPlan> {
+  if (!segments.length) throw new Error("Lime Slides cannot plan a beat because the transcript has no words.");
+  const beats: LimeSceneBeat[] = [];
+  let priorSameLayoutMs = 0;
+
+  for (const [index, segment] of segments.entries()) {
+    const previous = beats[index - 1];
+    const seed = deterministicBeat(segment, index, previous);
+    const raw = rawBeats[index] && typeof rawBeats[index] === "object" ? rawBeats[index] as Record<string, unknown> : null;
+    let candidate: LimeSceneBeat = seed;
+    let failures = raw ? [] : ["A beat is required for this transcript sentence segment."];
+    if (raw) {
+      const parsed = limeBeatSchema.safeParse(snapLimeBeatToSegment(raw, segment));
+      if (parsed.success) {
+        candidate = parsed.data;
+        failures = beatSequenceFailures(candidate, previous, priorSameLayoutMs);
+      } else failures = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
+    }
+    if (index === segments.length - 1 && rawBeats.length !== segments.length) failures.push(`Return exactly one beat for each of the ${segments.length} transcript segments.`);
+
+    let accepted: LimeSceneBeat | null = failures.length ? null : candidate;
+    for (let attempt = 0; !accepted && attempt < 2; attempt++) {
+      try {
+        const revised = await reviseLimeBeat(candidate, failures, segment.text);
+        const parsed = limeBeatSchema.safeParse(snapLimeBeatToSegment(revised, segment));
+        if (!parsed.success) failures = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
+        else {
+          candidate = parsed.data;
+          failures = beatSequenceFailures(candidate, previous, priorSameLayoutMs);
+          if (!failures.length) accepted = candidate;
+        }
+      } catch (error: any) {
+        failures = [...failures, error?.message || "Beat revision failed."];
+      }
+    }
+    if (!accepted) accepted = deterministicBeat(segment, index, previous);
+    beats.push(accepted);
+    priorSameLayoutMs = accepted.sceneType === previous?.sceneType
+      ? priorSameLayoutMs + accepted.endMs - accepted.startMs
+      : accepted.endMs - accepted.startMs;
   }
-  boundaries.push(totalMs);
-  const layouts: LimeSceneBeat["sceneType"][] = ["HALO_SPEAKER", "FULL_GRAPHIC", "SPLIT_SPEAKER", "FULL_GRAPHIC", "SPEAKER_STICKER", "NUMBERED_STEP"];
-  const speakerModes: Record<LimeSceneBeat["sceneType"], LimeSceneBeat["speakerMode"]> = {
-    HALO_SPEAKER: "halo", FULL_GRAPHIC: "hidden", SPLIT_SPEAKER: "split",
-    SPEAKER_STICKER: "full", NUMBERED_STEP: "hidden", CTA: "hidden",
-  };
-  const beats = Array.from({ length: count }, (_, index) => {
-    const startMs = boundaries[index];
-    const endMs = boundaries[index + 1];
-    const midpoint = (startMs + endMs) / 2;
-    const sourceBeat = source.find((beat) => beat.startMs <= midpoint && beat.endMs >= midpoint) || source[index % source.length];
-    const sceneType = index === count - 1 ? "CTA" : layouts[index % layouts.length];
-    const sourceText = sourceBeat.assetIntent || sourceBeat.headline;
-    const localHeadline = conceptHeadline(sourceText);
-    const derivedHeadline = localHeadline === "MAKE BETTER CONTENT" ? conceptHeadline(transcript) : localHeadline;
-    const headline = derivedHeadline;
-    return {
-      ...sourceBeat,
-      startMs,
-      endMs,
-      sceneType,
-      headline,
-      illustration: sourceBeat.illustration === "primitive" ? illustrationForConcept(transcript || sourceText) : sourceBeat.illustration,
-      speakerMode: speakerModes[sceneType],
-      badge: sceneType === "CTA" ? "LINK IN BIO" : (sourceBeat.badge && !/^(KEY TAKEAWAY|VERIFIED RESULT|STEP\s*0?\d+)$/i.test(sourceBeat.badge) ? sourceBeat.badge : undefined),
-    };
-  });
+
   return limeDirectorSchema.parse({ beats });
 }
 
@@ -193,11 +324,13 @@ export async function planLimeSlides(params: {
   topic?: string;
 }): Promise<LimeDirectorPlan> {
   const { transcript, transcriptionWords, durationSec } = params;
+  const source = transcript || params.topic || "";
+  const segments = segmentLimeTranscript(transcriptionWords, durationSec, source);
+  if (!segments.length) throw new Error("Lime Slides needs a transcript or timed words before it can plan scenes.");
   const apiKey = process.env.OPENAI_API_KEY;
   const model = process.env.LIME_DIRECTOR_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini";
-  if (!apiKey) return normalizeBeats(buildFallbackLimePlan(transcript || params.topic || "creator workflow", transcriptionWords, durationSec), transcriptionWords, durationSec, transcript || params.topic || "creator workflow");
+  if (!apiKey) return validateAndSnapBeats([], segments);
 
-  const source = transcript || params.topic || "creator workflow";
   let previousError = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -209,31 +342,28 @@ export async function planLimeSlides(params: {
           temperature: 0.35,
           response_format: { type: "json_object" },
           messages: [
-            { role: "system", content: "You are a short-form motion design director. Return JSON with beats. Each beat lasts 800-1200ms except the final beat. Alternate speaker and graphic layouts. Headlines are ALL CAPS, at most three concept words, and must summarize rather than copy spoken transcript fragments. Use an illustration enum from phone, carousel, line_chart, gear_diagram, swatches, calendar, video_player, editor_window, primitive. Never use placeholder labels." },
-            { role: "user", content: JSON.stringify({ transcript: source, durationMs: Math.round(durationSec * 1000), wordTimestamps: transcriptionWords.map((word) => ({ ...word, startMs: Math.round(word.start * 1000), endMs: Math.round(word.end * 1000) })), previousValidationError: previousError, requiredBeatShape: "{beats:[{startMs,endMs,sceneType,headline,badge?,illustration,illustrationProps,speakerMode,emphasisWords,assetIntent?}]}" }) },
+            { role: "system", content: "You are a short-form motion design director. Return JSON with exactly one beat for each supplied transcript segment, in the same order. Preserve each segment's startMs and endMs. Make original ALL-CAPS headlines of at most three words that summarize that segment. Do not repeat adjacent headlines or illustrations, and do not keep a layout for more than 1.5 seconds. Choose NUMBERED_STEP and set stepIndex only when the spoken segment explicitly enumerates a step (first/second/step one). Use an illustration enum from phone, carousel, line_chart, gear_diagram, swatches, calendar, video_player, editor_window, primitive. Never use generic placeholder labels." },
+            { role: "user", content: JSON.stringify({ segments: segments.map(({ startMs, endMs, text }) => ({ startMs, endMs, text })), previousValidationError: previousError, requiredBeatShape: "{beats:[{startMs,endMs,sceneType,headline,badge?,illustration,illustrationProps,speakerMode,emphasisWords,assetIntent?,stepIndex?}]}" }) },
           ],
         }),
         signal: AbortSignal.timeout(60_000),
       });
       if (!response.ok) throw new Error(`OpenAI scene authoring failed (${response.status}).`);
       const data = await response.json();
-      const parsed = limeDirectorSchema.parse(JSON.parse(data.choices?.[0]?.message?.content || "{}"));
-      return normalizeBeats(parsed, transcriptionWords, durationSec, transcript || params.topic || "creator workflow");
+      const payload = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+      if (!Array.isArray(payload.beats)) throw new Error("Director response did not include a beats array.");
+      return validateAndSnapBeats(payload.beats, segments);
     } catch (error: any) {
       previousError = error?.message || "Invalid director output.";
       if (attempt === 0) continue;
     }
   }
-  return normalizeBeats(buildFallbackLimePlan(source, transcriptionWords, durationSec), transcriptionWords, durationSec, source);
+  return validateAndSnapBeats([], segments);
 }
 
-export async function reviseLimeBeat(beat: LimeSceneBeat, failures: string[]): Promise<LimeSceneBeat> {
+export async function reviseLimeBeat(beat: LimeSceneBeat, failures: string[], segmentText = ""): Promise<LimeSceneBeat> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    const alternatives: LimeSceneBeat["illustration"][] = ["phone", "carousel", "line_chart", "gear_diagram", "swatches", "calendar", "video_player", "editor_window"];
-    const replacement = alternatives[(alternatives.indexOf(beat.illustration) + 1) % alternatives.length];
-    return limeBeatSchema.parse({ ...beat, headline: conceptHeadline(beat.assetIntent || beat.headline), illustration: replacement });
-  }
+  if (!apiKey) throw new Error("LIME_DIRECTOR_MODEL revision is unavailable because OPENAI_API_KEY is not configured.");
   const model = process.env.LIME_DIRECTOR_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini";
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -243,8 +373,8 @@ export async function reviseLimeBeat(beat: LimeSceneBeat, failures: string[]): P
       temperature: 0.2,
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: "Revise one motion-design beat. Preserve startMs and endMs. Return a JSON object for one beat with ALL-CAPS headline at most three words, a meaningful original illustration choice, no placeholders, and the same sceneType/speakerMode unless the reported issue requires a layout change." },
-        { role: "user", content: JSON.stringify({ currentBeat: beat, failures, requiredFields: ["startMs", "endMs", "sceneType", "headline", "illustration", "illustrationProps", "speakerMode", "emphasisWords"] }) },
+        { role: "system", content: "Revise one Lime Slides beat. Keep its startMs and endMs. Return a JSON object with a valid original ALL-CAPS headline of at most three words, meaningful illustration, valid sceneType and speakerMode. Set stepIndex and NUMBERED_STEP only for explicit spoken enumerations. Address every validation failure." },
+        { role: "user", content: JSON.stringify({ segmentWords: segmentText, currentBeat: beat, failures, requiredFields: ["startMs", "endMs", "sceneType", "headline", "illustration", "illustrationProps", "speakerMode", "emphasisWords"] }) },
       ],
     }),
     signal: AbortSignal.timeout(45_000),
@@ -252,5 +382,5 @@ export async function reviseLimeBeat(beat: LimeSceneBeat, failures: string[]): P
   if (!response.ok) throw new Error(`OpenAI scene revision failed (${response.status}).`);
   const data = await response.json();
   const revised = limeBeatSchema.parse(JSON.parse(data.choices?.[0]?.message?.content || "{}"));
-  return limeBeatSchema.parse({ ...revised, startMs: beat.startMs, endMs: beat.endMs });
+  return { ...revised, startMs: beat.startMs, endMs: beat.endMs };
 }

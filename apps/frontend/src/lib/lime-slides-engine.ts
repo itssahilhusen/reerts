@@ -3,14 +3,14 @@ import path from "path";
 import os from "os";
 import { exec, execFile } from "child_process";
 import { promisify } from "util";
-import { LimeAuteurEditPlan } from "./lime-director-schema";
+import type { LimeAuteurEditPlan, LimeSceneBeat } from "./lime-director-schema";
+import { reviseLimeBeat } from "./lime-director-schema";
 import { assertRealSceneCopy, chunkLimeCaptions } from "./lime-render-utils";
 import { buildFaceAwareSpeakerFilter, detectSpeakerFaceTrack } from "./lime-face-tracking";
 import { getFfmpegPath, getFfprobePath } from "./media-tool-paths";
 import { renderLimeSceneClips, TimedLimeScene } from "./lime-remotion/render-scenes";
 import type { LimeSceneType, LimeSpeakerMode, LimeIllustrationName } from "./lime-remotion/LimeScene";
 import { LimeQualityReport, checkLimeRender } from "./lime-quality-check";
-import { conceptHeadline, illustrationForConcept, reviseLimeBeat, type LimeSceneBeat } from "./lime-director-schema";
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -667,32 +667,17 @@ export function mapPlanToLimeScenes(
   transcriptWords: Array<{ word: string; start: number; end: number }> = []
 ): LimeSceneData[] {
   if (plan?.limeBeats?.length) {
-    const transcript = transcriptWords.map((word) => word.word).join(" ");
-    const overallConcept = conceptHeadline(transcript);
-    const normalizedTranscript = transcript.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
     return plan.limeBeats.map((beat, index) => ({
       sceneType: beat.sceneType === "HALO_SPEAKER" || beat.sceneType === "SPEAKER_STICKER" ? "halo_hook"
         : beat.sceneType === "NUMBERED_STEP" ? "split_steps"
         : beat.sceneType === "CTA" ? "closer_cta" : "split_chart",
       renderSceneType: beat.sceneType,
       speakerMode: beat.speakerMode,
-      illustration: beat.illustration === "primitive" ? illustrationForConcept(transcript || beat.assetIntent || beat.headline) : beat.illustration,
+      illustration: beat.illustration,
       illustrationProps: beat.illustrationProps,
       emphasisWords: beat.emphasisWords,
-      stepNumber: index + 1,
-      headline: (() => {
-        const candidate = beat.headline.toUpperCase().replace(/\s+/g, " ").trim();
-        const candidateWords = candidate.split(" ");
-        const normalizedCandidate = candidate.toLowerCase();
-        const isTranscriptFragment = candidateWords.length === 1
-          ? normalizedTranscript.split(" ").includes(normalizedCandidate)
-          : ` ${normalizedTranscript} `.includes(` ${normalizedCandidate} `);
-        const localConcept = conceptHeadline(beat.assetIntent || beat.headline);
-        const semanticHeadline = candidate !== "CREATOR STRATEGY" && candidate !== "MAKE BETTER CONTENT" && !isTranscriptFragment
-          ? candidate
-          : localConcept === "MAKE BETTER CONTENT" ? overallConcept : localConcept;
-        return assertRealSceneCopy(semanticHeadline, "Scene headline");
-      })(),
+      stepNumber: beat.stepIndex,
+      headline: assertRealSceneCopy(beat.headline.toUpperCase().replace(/\s+/g, " ").trim(), "Scene headline"),
       start: beat.startMs / 1000,
       end: beat.endMs / 1000,
       beatIndex: index,
@@ -993,7 +978,7 @@ export async function renderLimeSlidesVideo(options: {
     illustration: scene.illustration || ["phone", "carousel", "line_chart", "gear_diagram", "swatches", "calendar", "video_player", "editor_window"][index % 8] as LimeIllustrationName,
     illustrationProps: scene.illustrationProps || {},
     emphasisWords: scene.emphasisWords || [],
-    stepNumber: scene.stepNumber || index + 1,
+    stepNumber: scene.stepNumber,
     start: scene.start,
     end: scene.end,
     durationInFrames: Math.max(1, Math.round((scene.end - scene.start) * 30)),

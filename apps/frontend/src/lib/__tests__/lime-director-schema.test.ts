@@ -1,6 +1,15 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { buildFallbackLimePlan, conceptHeadline, limeDirectorSchema } from "../lime-director-schema";
+import { buildFallbackLimePlan, limeDirectorSchema, segmentLimeTranscript, validateAndSnapBeats } from "../lime-director-schema";
+
+const words = [
+  { word: "I", start: 0, end: .18 }, { word: "build", start: .2, end: .48 },
+  { word: "product", start: .52, end: .82 }, { word: "pages.", start: .86, end: 1.18 },
+  { word: "People", start: 1.55, end: 1.82 }, { word: "trust", start: 1.85, end: 2.1 },
+  { word: "clear", start: 2.14, end: 2.4 }, { word: "labels.", start: 2.44, end: 2.75 },
+  { word: "Show", start: 3.1, end: 3.35 }, { word: "results", start: 3.38, end: 3.68 },
+  { word: "with", start: 3.72, end: 3.88 }, { word: "evidence.", start: 3.92, end: 4.3 },
+];
 
 describe("Lime Slides Director schema", () => {
   it("rejects headlines over three words or not in uppercase", () => {
@@ -18,29 +27,76 @@ describe("Lime Slides Director schema", () => {
     assert.equal(limeDirectorSchema.safeParse({ beats: [{ ...base, headline: "lowercase" }] }).success, false);
   });
 
-  it("creates about one word-aligned scene per second from a 12-second clip", () => {
-    const words = Array.from({ length: 24 }, (_, index) => ({
-      word: index % 2 ? "automate" : "workflow",
-      start: index * .5,
-      end: index * .5 + .35,
-    }));
-    const plan = buildFallbackLimePlan("automate the workflow", words, 12);
-    assert.equal(plan.beats.length, 12);
-    for (const beat of plan.beats.slice(0, -1)) {
-      const duration = beat.endMs - beat.startMs;
-      assert.ok(duration >= 800 && duration <= 1200);
-      assert.equal(beat.endMs % 500, 350);
-    }
-    assert.equal(plan.beats.at(-1)?.sceneType, "CTA");
-    assert.ok(plan.beats.every((beat) => beat.headline.split(/\s+/).length <= 3));
+  it("segments on sentence punctuation and long pauses, then keeps beat durations bounded", () => {
+    const segmented = segmentLimeTranscript(words, 5);
+    assert.equal(segmented.length, 3);
+    assert.deepEqual(segmented.map((segment) => segment.text), [
+      "I build product pages.", "People trust clear labels.", "Show results with evidence.",
+    ]);
+    assert.ok(segmented.every((segment) => segment.endMs > segment.startMs));
+
+    const longWords = Array.from({ length: 12 }, (_, index) => ({ word: `word${index}`, start: index * .3, end: index * .3 + .2 }));
+    const longSegments = segmentLimeTranscript(longWords, 4);
+    assert.ok(longSegments.every((segment) => segment.endMs - segment.startMs <= 2500));
   });
 
-  it("uses a concept headline instead of copying spoken fragments", () => {
-    assert.equal(conceptHeadline("have a conversation with somebody"), "START BETTER CONVERSATIONS");
-    assert.equal(conceptHeadline("the hardest things"), "MAKE BETTER CONTENT");
-    const transcript = "I swear one of the hardest things is trying to have a conversation with somebody";
-    const words = transcript.split(" ").map((word, index) => ({ word, start: index * .3, end: index * .3 + .2 }));
-    const plan = buildFallbackLimePlan(transcript, words, 4);
-    assert.ok(plan.beats.every((beat) => beat.headline === "START BETTER CONVERSATIONS"));
+  it("builds distinct fallback headlines from each sentence's own words", () => {
+    const plan = buildFallbackLimePlan("unrelated transcript ignored", words, 5);
+    assert.equal(plan.beats.length, 3);
+    assert.deepEqual(plan.beats.map((beat) => beat.headline), ["BUILD PRODUCT PAGES", "PEOPLE TRUST CLEAR", "SHOW RESULTS EVIDENCE"]);
+    assert.notEqual(plan.beats[0].headline, plan.beats[1].headline);
+    assert.ok(plan.beats.every((beat) => beat.stepIndex == null && beat.sceneType !== "NUMBERED_STEP"));
+  });
+
+  it("snaps only beat timing and preserves the planner's visual fields", async () => {
+    const segment = segmentLimeTranscript(words, 5)[0];
+    const plannerBeat = {
+      startMs: 12,
+      endMs: 901,
+      sceneType: "FULL_GRAPHIC",
+      headline: "PRODUCT PAGES",
+      badge: "CLEAR COPY",
+      illustration: "phone",
+      illustrationProps: { label: "Pages" },
+      speakerMode: "split",
+      emphasisWords: ["product"],
+      assetIntent: "Show a product page",
+    };
+    const result = await validateAndSnapBeats([plannerBeat], [segment]);
+    assert.deepEqual(result.beats[0], {
+      ...plannerBeat,
+      startMs: segment.startMs,
+      endMs: segment.endMs,
+    });
+  });
+
+  it("repairs repeated adjacent headlines with beat-local copy", async () => {
+    const segments = segmentLimeTranscript(words, 5);
+    const template = {
+      sceneType: "FULL_GRAPHIC",
+      headline: "SAME TITLE",
+      illustration: "phone",
+      illustrationProps: {},
+      speakerMode: "hidden",
+      emphasisWords: [],
+    };
+    const result = await validateAndSnapBeats(segments.map((segment) => ({ ...template, startMs: segment.startMs, endMs: segment.endMs })), segments);
+    assert.notEqual(result.beats[0].headline, result.beats[1].headline);
+    assert.notEqual(result.beats[0].illustration, result.beats[1].illustration);
+  });
+
+  it("allows numbered badges only for beats with an explicit step index", () => {
+    const base = {
+      startMs: 0,
+      endMs: 1000,
+      sceneType: "NUMBERED_STEP",
+      headline: "TRACK RESULTS",
+      illustration: "line_chart",
+      illustrationProps: {},
+      speakerMode: "hidden",
+      emphasisWords: [],
+    };
+    assert.equal(limeDirectorSchema.safeParse({ beats: [base] }).success, false);
+    assert.equal(limeDirectorSchema.safeParse({ beats: [{ ...base, stepIndex: 2, badge: "STEP 2" }] }).success, true);
   });
 });
