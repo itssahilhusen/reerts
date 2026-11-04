@@ -1,6 +1,7 @@
 import React from "react";
 import { Composition, registerRoot } from "remotion";
 import { LimeScene, LimeSceneProps } from "./LimeScene";
+import { SceneRenderer } from "./SceneRenderer";
 
 const defaults: LimeSceneProps = {
   sceneType: "HALO_SPEAKER",
@@ -14,9 +15,13 @@ const defaults: LimeSceneProps = {
   durationInFrames: 30,
 };
 
+const LimeSceneComposition: React.FC<LimeSceneProps> = (props) => props.sceneSpec
+  ? <SceneRenderer {...props} sceneSpec={props.sceneSpec} />
+  : <LimeScene {...props} />;
+
 const Root: React.FC = () => <Composition
   id="LimeScene"
-  component={LimeScene as React.FC<any>}
+  component={LimeSceneComposition as React.FC<any>}
   width={1080}
   height={1920}
   fps={30}

@@ -6,6 +6,7 @@ import { promisify } from "util";
 import { getLimeWipeState } from "../lime-remotion/LimeScene";
 import { renderLimeSceneClips } from "../lime-remotion/render-scenes";
 import { getFfmpegPath } from "../media-tool-paths";
+import type { LimeSceneSpec } from "../lime-scene-spec";
 
 const execFileAsync = promisify(execFile);
 
@@ -52,6 +53,30 @@ describe("Lime Slides wipe", () => {
         if (isBlack || isWhite) offendingPixels++;
       }
       assert.equal(offendingPixels, 0, "frame 8 must not retain the black or white wipe bars at x > 1060");
+    } finally {
+      fs.rmSync(result.directory, { recursive: true, force: true });
+    }
+  });
+
+  it("renders the validated declarative component kit", async () => {
+    const sceneSpec: LimeSceneSpec = {
+      layout: "stack",
+      components: [{ id: "test-counter", type: "Counter", startFrame: 0, endFrame: 12, props: { value: 84, label: "New users", suffix: "+" } }],
+    };
+    const result = await renderLimeSceneClips([{
+      sceneType: "FULL_GRAPHIC",
+      speakerMode: "hidden",
+      headline: "REAL PROOF",
+      illustration: "line_chart",
+      illustrationProps: { label: "Acquisition" },
+      emphasisWords: ["proof"],
+      sceneSpec,
+      start: 0,
+      end: 0.4,
+      durationInFrames: 12,
+    }], "scene-kit-test");
+    try {
+      assert.equal(fs.existsSync(result.clips[0].path), true);
     } finally {
       fs.rmSync(result.directory, { recursive: true, force: true });
     }

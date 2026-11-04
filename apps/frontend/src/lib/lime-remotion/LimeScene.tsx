@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { AbsoluteFill, cancelRender, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import React from "react";
+import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import type { LimeResolvedAsset } from "../lime-assets";
+import type { LimeSceneSpec } from "../lime-scene-spec";
+import { useLimeFontsReady } from "./useLimeFonts";
 
 export type LimeSceneType = "HALO_SPEAKER" | "FULL_GRAPHIC" | "SPLIT_SPEAKER" | "SPEAKER_STICKER" | "NUMBERED_STEP" | "CTA";
 export type LimeSpeakerMode = "halo" | "split" | "full" | "hidden";
@@ -15,6 +17,7 @@ export interface LimeSceneProps {
   illustrationProps: Record<string, unknown>;
   emphasisWords: string[];
   asset?: Pick<LimeResolvedAsset, "type" | "dataUri" | "alt" | "attribution" | "attributionUrl">;
+  sceneSpec?: LimeSceneSpec;
   stepNumber?: number;
   durationInFrames: number;
 }
@@ -115,13 +118,18 @@ function EditorIllustration() {
   </svg>;
 }
 
-function Illustration({ name }: { name: LimeIllustrationName }) {
+function Illustration({ name, illustrationProps = {} }: { name: LimeIllustrationName; illustrationProps?: Record<string, unknown> }) {
   const art = {
     phone: <PhoneIllustration />, carousel: <CarouselIllustration />, line_chart: <ChartIllustration />,
     gear_diagram: <GearDiagramIllustration />, swatches: <SwatchesIllustration />, calendar: <CalendarIllustration />,
     video_player: <VideoPlayerIllustration />, editor_window: <EditorIllustration />, primitive: <ChartIllustration />,
   }[name];
-  return <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>{art}</div>;
+  const label = [illustrationProps.label, illustrationProps.title, illustrationProps.caption, illustrationProps.value]
+    .find((value) => typeof value === "string" && value.trim()) as string | undefined;
+  return <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    {art}
+    {label && <div style={{ position: "absolute", left: "10%", right: "10%", bottom: "4%", padding: "10px 16px", border: `3px solid ${BLACK}`, borderRadius: 14, background: WHITE, color: BLACK, textAlign: "center", font: "800 24px Montserrat, Arial, sans-serif" }}>{label}</div>}
+  </div>;
 }
 
 function DotGrid() {
@@ -131,7 +139,7 @@ function DotGrid() {
   </svg>;
 }
 
-function measureHeadline(text: string, maxWidth: number, initialSize = 140, minSize = 48) {
+export function measureHeadline(text: string, maxWidth: number, initialSize = 140, minSize = 48) {
   if (!document.fonts.check('400 16px "Anton"')) throw new Error("Anton did not load before headline measurement.");
   const context = document.createElement("canvas").getContext("2d");
   if (!context) throw new Error("Headline font measurement is unavailable.");
@@ -156,35 +164,20 @@ function measureHeadline(text: string, maxWidth: number, initialSize = 140, minS
   throw new Error(`Headline cannot fit on two lines at ${minSize}px: ${text}`);
 }
 
-export const LimeScene: React.FC<LimeSceneProps> = (props) => {
-  const [fontHandle] = useState(() => delayRender("Load Lime Slides fonts"));
-  const [fontsReady, setFontsReady] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    const faces = [
-      new FontFace("Anton", `url(${staticFile("fonts/Anton-Regular.ttf")})`, { weight: "400" }),
-      new FontFace("Montserrat", `url(${staticFile("fonts/Montserrat-Variable.ttf")})`, { weight: "100 900" }),
-      new FontFace("Montserrat ExtraBold", `url(${staticFile("fonts/Montserrat-ExtraBold.ttf")})`, { weight: "800" }),
-    ];
-    Promise.all(faces.map((face) => face.load()))
-      .then((loaded) => {
-        loaded.forEach((face) => document.fonts.add(face));
-        return document.fonts.ready;
-      })
-      .then(() => {
-        if (cancelled) return;
-        if (!document.fonts.check('400 16px "Anton"') || !document.fonts.check('800 16px "Montserrat ExtraBold"')) {
-          throw new Error("Lime Slides bundled fonts failed document.fonts.check().");
-        }
-        setFontsReady(true);
-        continueRender(fontHandle);
-      })
-      .catch((error) => {
-        if (!cancelled) cancelRender(error instanceof Error ? error : new Error(String(error)));
-      });
-    return () => { cancelled = true; };
-  }, [fontHandle]);
+export function renderEmphasizedText(text: string, emphasisWords: string[], frame: number): React.ReactNode {
+  const emphasized = new Set(emphasisWords.map((word) => word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "")).filter(Boolean));
+  let sequence = 0;
+  return text.split(/(\s+)/).map((token, index) => {
+    const normalized = token.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+    if (!normalized || !emphasized.has(normalized)) return <React.Fragment key={index}>{token}</React.Fragment>;
+    const start = sequence++ * 3;
+    const scale = interpolate(frame, [start, start + 3, start + 8], [1, 1.18, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+    return <span key={index} style={{ display: "inline-block", color: RED, transform: `scale(${scale})`, transformOrigin: "center bottom" }}>{token}</span>;
+  });
+}
 
+export const LimeScene: React.FC<LimeSceneProps> = (props) => {
+  const fontsReady = useLimeFontsReady();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   if (!fontsReady) return null;
@@ -197,11 +190,11 @@ export const LimeScene: React.FC<LimeSceneProps> = (props) => {
   const stageHeight = props.sceneType === "SPLIT_SPEAKER" ? 864 : props.sceneType === "HALO_SPEAKER" ? 720 : 1920;
   const headlineLayout = measureHeadline(props.headline, 984);
   const stickerLayout = props.sceneType === "SPEAKER_STICKER" ? measureHeadline(props.headline, 520, 90) : headlineLayout;
-  const headline = <div style={{ position: "relative", zIndex: 4, maxWidth: 984, margin: "0 auto", padding: "17px 28px", border: `6px solid ${BLACK}`, borderRadius: 32, background: LIME, color: BLACK, fontFamily: "Anton, 'Arial Narrow', Impact, sans-serif", fontSize: headlineLayout.fontSize, lineHeight: .95, fontWeight: 900, letterSpacing: -2, textAlign: "center", textTransform: "uppercase", whiteSpace: "pre-line", boxShadow: `10px 10px 0 ${BLACK}`, transform: "rotate(-2deg)" }}>{headlineLayout.text}</div>;
+  const headline = <div style={{ position: "relative", zIndex: 4, maxWidth: 984, margin: "0 auto", padding: "17px 28px", border: `6px solid ${BLACK}`, borderRadius: 32, background: LIME, color: BLACK, fontFamily: "Anton, 'Arial Narrow', Impact, sans-serif", fontSize: headlineLayout.fontSize, lineHeight: .95, fontWeight: 900, letterSpacing: -2, textAlign: "center", textTransform: "uppercase", whiteSpace: "pre-line", boxShadow: `10px 10px 0 ${BLACK}`, transform: "rotate(-2deg)" }}>{renderEmphasizedText(headlineLayout.text, props.emphasisWords, frame)}</div>;
   const drift = Math.sin(frame * .11) * 10;
   const visualContent = props.asset
     ? <img src={props.asset.dataUri} alt={props.asset.alt} style={{ width: "100%", height: "100%", objectFit: props.asset.type === "logo" ? "contain" : "cover", borderRadius: 28, background: WHITE }} />
-    : <Illustration name={props.illustration} />;
+    : <Illustration name={props.illustration} illustrationProps={props.illustrationProps} />;
   const assetCredit = props.asset?.attribution ? <div style={{ position: "absolute", zIndex: 5, right: 18, bottom: 18, maxWidth: "88%", padding: "8px 12px", borderRadius: 10, background: "rgba(10,10,10,.82)", color: WHITE, font: "700 17px Montserrat, Arial, sans-serif" }}>{props.asset.attribution}</div> : null;
   const illustration = <div style={{ position: "relative", zIndex: 3, width: 920, height: 620, margin: "28px auto 0", display: "flex", alignItems: "center", justifyContent: "center", transform: `translateY(${drift}px) rotate(${Math.sin(frame * .07) * .35}deg)` }}>{visualContent}{assetCredit}</div>;
   const badge = props.badge ? <div style={{ position: "absolute", zIndex: 5, left: 70, bottom: 64, padding: "18px 28px", border: `5px solid ${BLACK}`, borderRadius: 28, background: WHITE, color: BLACK, fontFamily: "Arial, sans-serif", fontWeight: 900, fontSize: 34, textTransform: "uppercase", transform: `scale(${interpolate(enter, [0, 1], [.65, 1])})` }}>{props.badge}</div> : null;
@@ -217,14 +210,14 @@ export const LimeScene: React.FC<LimeSceneProps> = (props) => {
     {props.sceneType === "SPLIT_SPEAKER" && <div style={{ position: "absolute", inset: "0 0 auto", height: stageHeight, padding: "44px 48px", borderRadius: "0 0 70px 70px", background: LIME, border: `8px solid ${BLACK}`, overflow: "hidden" }}><DotGrid />
       <div style={{ transform: `translateY(${translateY}px) scale(${scale})` }}>{headline}</div>{illustration}</div>}
     {props.sceneType === "SPEAKER_STICKER" && <div style={{ position: "absolute", top: 120, left: 52, width: 900, minHeight: 320, padding: 24, display: "flex", alignItems: "center", gap: 18, border: `7px solid ${BLACK}`, borderRadius: 36, background: LIME, boxShadow: `12px 12px 0 ${BLACK}`, transform: `translateY(${translateY}px) scale(${scale}) rotate(-2deg)` }}>
-      <div style={{ flex: 1, fontFamily: "Anton, 'Arial Narrow', Impact, sans-serif", fontSize: stickerLayout.fontSize, fontWeight: 900, lineHeight: .95, whiteSpace: "pre-line", textTransform: "uppercase" }}>{stickerLayout.text}</div><div style={{ position: "relative", width: 270, height: 230 }}>{props.asset ? <img src={props.asset.dataUri} alt={props.asset.alt} style={{ width: "100%", height: "100%", objectFit: props.asset.type === "logo" ? "contain" : "cover", borderRadius: 14, background: WHITE }} /> : <Illustration name={props.illustration} />}{assetCredit}</div></div>}
+      <div style={{ flex: 1, fontFamily: "Anton, 'Arial Narrow', Impact, sans-serif", fontSize: stickerLayout.fontSize, fontWeight: 900, lineHeight: .95, whiteSpace: "pre-line", textTransform: "uppercase" }}>{renderEmphasizedText(stickerLayout.text, props.emphasisWords, frame)}</div><div style={{ position: "relative", width: 270, height: 230 }}>{props.asset ? <img src={props.asset.dataUri} alt={props.asset.alt} style={{ width: "100%", height: "100%", objectFit: props.asset.type === "logo" ? "contain" : "cover", borderRadius: 14, background: WHITE }} /> : <Illustration name={props.illustration} illustrationProps={props.illustrationProps} />}{assetCredit}</div></div>}
     {props.sceneType === "FULL_GRAPHIC" && <div style={{ position: "absolute", inset: 0, paddingTop: 100 }}><DotGrid /><div style={{ transform: `translateY(${translateY}px) scale(${scale})` }}>{headline}</div>{illustration}
       {props.headline && <div style={{ position: "absolute", left: -40, right: -40, bottom: 110, padding: 18, overflow: "hidden", whiteSpace: "nowrap", background: BLACK, color: LIME, borderTop: `5px solid ${WHITE}`, borderBottom: `5px solid ${WHITE}`, transform: "rotate(-3deg)", font: "900 50px Arial, sans-serif", letterSpacing: 5 }}>{Array(5).fill(props.headline).join("   •   ")}</div>}</div>}
     {props.sceneType === "NUMBERED_STEP" && <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 130 }}><DotGrid />
       <div style={{ width: 190, height: 190, display: "grid", placeItems: "center", border: `10px solid ${BLACK}`, borderRadius: "50%", background: WHITE, font: "900 120px Arial, sans-serif", boxShadow: `10px 10px 0 ${BLACK}`, transform: `scale(${scale})` }}>{props.stepNumber}</div>
       <div style={{ marginTop: 34, transform: `translateY(${translateY}px)` }}>{headline}</div>{illustration}</div>}
     {props.sceneType === "CTA" && <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}><DotGrid />
-      <div style={{ position: "absolute", top: "36%", left: "5%", width: "90%", padding: "35px 26px", border: `8px solid ${LIME}`, borderRadius: 34, background: BLACK, color: WHITE, textAlign: "center", font: `900 ${headlineLayout.fontSize}px Anton, 'Arial Narrow', Impact, sans-serif`, whiteSpace: "pre-line", transform: `scale(${scale}) rotate(-2deg)` }}>{headlineLayout.text}</div>
+      <div style={{ position: "absolute", top: "36%", left: "5%", width: "90%", padding: "35px 26px", border: `8px solid ${LIME}`, borderRadius: 34, background: BLACK, color: WHITE, textAlign: "center", font: `900 ${headlineLayout.fontSize}px Anton, 'Arial Narrow', Impact, sans-serif`, whiteSpace: "pre-line", transform: `scale(${scale}) rotate(-2deg)` }}>{renderEmphasizedText(headlineLayout.text, props.emphasisWords, frame)}</div>
     </div>}
     <div style={{ position: "absolute", zIndex: 20, top: -120, bottom: -120, width: 42, left: 0, background: BLACK, opacity: wipe.opacity, transform: `translateX(${wipe.x}px) skewX(-18deg)`, pointerEvents: "none" }} />
     <div style={{ position: "absolute", zIndex: 21, top: -120, bottom: -120, width: 16, left: 0, background: WHITE, opacity: wipe.opacity, transform: `translateX(${wipe.x + 48}px) skewX(-18deg)`, pointerEvents: "none" }} />
