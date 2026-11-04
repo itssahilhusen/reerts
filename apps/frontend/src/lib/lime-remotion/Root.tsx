@@ -10,7 +10,7 @@ const defaults: LimeSceneProps = {
   illustration: "phone",
   illustrationProps: {},
   emphasisWords: [],
-  stepNumber: 1,
+  stepNumber: undefined,
   durationInFrames: 30,
 };
 

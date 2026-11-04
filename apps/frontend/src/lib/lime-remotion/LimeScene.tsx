@@ -1,5 +1,5 @@
-import React from "react";
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import React, { useEffect, useState } from "react";
+import { AbsoluteFill, cancelRender, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 
 export type LimeSceneType = "HALO_SPEAKER" | "FULL_GRAPHIC" | "SPLIT_SPEAKER" | "SPEAKER_STICKER" | "NUMBERED_STEP" | "CTA";
 export type LimeSpeakerMode = "halo" | "split" | "full" | "hidden";
@@ -22,6 +22,15 @@ const DARK_LIME = "#B5E208";
 const BLACK = "#0A0A0A";
 const WHITE = "#FFFFFF";
 const RED = "#F14B3E";
+const WIPE_END_X = 1080 + Math.ceil(2160 * Math.tan(18 * Math.PI / 180)) + 96;
+
+export function getLimeWipeState(frame: number) {
+  const progress = Math.max(0, Math.min(1, frame / 7));
+  return {
+    x: -1400 + (WIPE_END_X + 1400) * progress,
+    opacity: frame < 8 ? 1 : 0,
+  };
+}
 
 function PhoneIllustration() {
   return <svg viewBox="0 0 360 300" width="100%" height="100%" aria-label="Phone with hearts">
@@ -110,7 +119,7 @@ function Illustration({ name }: { name: LimeIllustrationName }) {
     gear_diagram: <GearDiagramIllustration />, swatches: <SwatchesIllustration />, calendar: <CalendarIllustration />,
     video_player: <VideoPlayerIllustration />, editor_window: <EditorIllustration />, primitive: <ChartIllustration />,
   }[name];
-  return <div style={{ width: 520, height: 360, display: "flex", alignItems: "center", justifyContent: "center" }}>{art}</div>;
+  return <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>{art}</div>;
 }
 
 function DotGrid() {
@@ -121,6 +130,7 @@ function DotGrid() {
 }
 
 function measureHeadline(text: string, maxWidth: number, initialSize = 140, minSize = 48) {
+  if (!document.fonts.check('400 16px "Anton"')) throw new Error("Anton did not load before headline measurement.");
   const context = document.createElement("canvas").getContext("2d");
   if (!context) throw new Error("Headline font measurement is unavailable.");
   const words = text.trim().replace(/\s+/g, " ").split(" ");
@@ -145,20 +155,49 @@ function measureHeadline(text: string, maxWidth: number, initialSize = 140, minS
 }
 
 export const LimeScene: React.FC<LimeSceneProps> = (props) => {
+  const [fontHandle] = useState(() => delayRender("Load Lime Slides fonts"));
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const faces = [
+      new FontFace("Anton", `url(${staticFile("fonts/Anton-Regular.ttf")})`, { weight: "400" }),
+      new FontFace("Montserrat", `url(${staticFile("fonts/Montserrat-Variable.ttf")})`, { weight: "100 900" }),
+      new FontFace("Montserrat ExtraBold", `url(${staticFile("fonts/Montserrat-ExtraBold.ttf")})`, { weight: "800" }),
+    ];
+    Promise.all(faces.map((face) => face.load()))
+      .then((loaded) => {
+        loaded.forEach((face) => document.fonts.add(face));
+        return document.fonts.ready;
+      })
+      .then(() => {
+        if (cancelled) return;
+        if (!document.fonts.check('400 16px "Anton"') || !document.fonts.check('800 16px "Montserrat ExtraBold"')) {
+          throw new Error("Lime Slides bundled fonts failed document.fonts.check().");
+        }
+        setFontsReady(true);
+        continueRender(fontHandle);
+      })
+      .catch((error) => {
+        if (!cancelled) cancelRender(error instanceof Error ? error : new Error(String(error)));
+      });
+    return () => { cancelled = true; };
+  }, [fontHandle]);
+
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  if (!fontsReady) return null;
   const enter = spring({ frame, fps, config: { damping: 12, stiffness: 150, overshootClamping: false } });
   const exit = interpolate(frame, [Math.max(0, props.durationInFrames - 7), props.durationInFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const translateY = interpolate(enter, [0, 1], [48, 0]);
   const scale = interpolate(enter, [0, 1], [.9, 1]);
-  const wipeX = interpolate(frame, [0, 7], [-1300, 1300], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const wipe = getLimeWipeState(frame);
   const fullBleed = props.sceneType === "FULL_GRAPHIC" || props.sceneType === "NUMBERED_STEP" || props.sceneType === "CTA";
   const stageHeight = props.sceneType === "SPLIT_SPEAKER" ? 864 : props.sceneType === "HALO_SPEAKER" ? 720 : 1920;
   const headlineLayout = measureHeadline(props.headline, 984);
   const stickerLayout = props.sceneType === "SPEAKER_STICKER" ? measureHeadline(props.headline, 520, 90) : headlineLayout;
   const headline = <div style={{ position: "relative", zIndex: 4, maxWidth: 984, margin: "0 auto", padding: "17px 28px", border: `6px solid ${BLACK}`, borderRadius: 32, background: LIME, color: BLACK, fontFamily: "Anton, 'Arial Narrow', Impact, sans-serif", fontSize: headlineLayout.fontSize, lineHeight: .95, fontWeight: 900, letterSpacing: -2, textAlign: "center", textTransform: "uppercase", whiteSpace: "pre-line", boxShadow: `10px 10px 0 ${BLACK}`, transform: "rotate(-2deg)" }}>{headlineLayout.text}</div>;
   const drift = Math.sin(frame * .11) * 10;
-  const illustration = <div style={{ position: "relative", zIndex: 3, width: 580, height: 380, margin: "28px auto 0", padding: 20, border: `7px solid ${BLACK}`, borderRadius: 40, background: WHITE, boxShadow: `12px 12px 0 ${BLACK}`, display: "flex", alignItems: "center", justifyContent: "center", transform: `translateY(${drift}px) rotate(${Math.sin(frame * .07) * .35}deg)` }}><Illustration name={props.illustration} /></div>;
+  const illustration = <div style={{ position: "relative", zIndex: 3, width: 920, height: 620, margin: "28px auto 0", display: "flex", alignItems: "center", justifyContent: "center", transform: `translateY(${drift}px) rotate(${Math.sin(frame * .07) * .35}deg)` }}><Illustration name={props.illustration} /></div>;
   const badge = props.badge ? <div style={{ position: "absolute", zIndex: 5, left: 70, bottom: 64, padding: "18px 28px", border: `5px solid ${BLACK}`, borderRadius: 28, background: WHITE, color: BLACK, fontFamily: "Arial, sans-serif", fontWeight: 900, fontSize: 34, textTransform: "uppercase", transform: `scale(${interpolate(enter, [0, 1], [.65, 1])})` }}>{props.badge}</div> : null;
 
   return <AbsoluteFill style={{ overflow: "hidden", opacity: 1 - exit * .08 }}>
@@ -176,13 +215,13 @@ export const LimeScene: React.FC<LimeSceneProps> = (props) => {
     {props.sceneType === "FULL_GRAPHIC" && <div style={{ position: "absolute", inset: 0, paddingTop: 100 }}><DotGrid /><div style={{ transform: `translateY(${translateY}px) scale(${scale})` }}>{headline}</div>{illustration}
       {props.headline && <div style={{ position: "absolute", left: -40, right: -40, bottom: 110, padding: 18, overflow: "hidden", whiteSpace: "nowrap", background: BLACK, color: LIME, borderTop: `5px solid ${WHITE}`, borderBottom: `5px solid ${WHITE}`, transform: "rotate(-3deg)", font: "900 50px Arial, sans-serif", letterSpacing: 5 }}>{Array(5).fill(props.headline).join("   •   ")}</div>}</div>}
     {props.sceneType === "NUMBERED_STEP" && <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 130 }}><DotGrid />
-      <div style={{ width: 190, height: 190, display: "grid", placeItems: "center", border: `10px solid ${BLACK}`, borderRadius: "50%", background: WHITE, font: "900 120px Arial, sans-serif", boxShadow: `10px 10px 0 ${BLACK}`, transform: `scale(${scale})` }}>{props.stepNumber || 1}</div>
+      <div style={{ width: 190, height: 190, display: "grid", placeItems: "center", border: `10px solid ${BLACK}`, borderRadius: "50%", background: WHITE, font: "900 120px Arial, sans-serif", boxShadow: `10px 10px 0 ${BLACK}`, transform: `scale(${scale})` }}>{props.stepNumber}</div>
       <div style={{ marginTop: 34, transform: `translateY(${translateY}px)` }}>{headline}</div>{illustration}</div>}
     {props.sceneType === "CTA" && <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}><DotGrid />
       <div style={{ position: "absolute", top: "36%", left: "5%", width: "90%", padding: "35px 26px", border: `8px solid ${LIME}`, borderRadius: 34, background: BLACK, color: WHITE, textAlign: "center", font: `900 ${headlineLayout.fontSize}px Anton, 'Arial Narrow', Impact, sans-serif`, whiteSpace: "pre-line", transform: `scale(${scale}) rotate(-2deg)` }}>{headlineLayout.text}</div>
     </div>}
-    <div style={{ position: "absolute", zIndex: 20, top: -120, bottom: -120, width: 42, left: 0, background: BLACK, transform: `translateX(${wipeX}px) skewX(-18deg)`, pointerEvents: "none" }} />
-    <div style={{ position: "absolute", zIndex: 21, top: -120, bottom: -120, width: 16, left: 0, background: WHITE, transform: `translateX(${wipeX + 48}px) skewX(-18deg)`, pointerEvents: "none" }} />
+    <div style={{ position: "absolute", zIndex: 20, top: -120, bottom: -120, width: 42, left: 0, background: BLACK, opacity: wipe.opacity, transform: `translateX(${wipe.x}px) skewX(-18deg)`, pointerEvents: "none" }} />
+    <div style={{ position: "absolute", zIndex: 21, top: -120, bottom: -120, width: 16, left: 0, background: WHITE, opacity: wipe.opacity, transform: `translateX(${wipe.x + 48}px) skewX(-18deg)`, pointerEvents: "none" }} />
     {badge}
   </AbsoluteFill>;
 };

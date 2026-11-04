@@ -48,6 +48,32 @@ function resolveLimeRemotionEntryPoint(): string {
   throw new Error(`Lime Slides Remotion entry point was not found. Checked: ${[...candidates].join(", ")}`);
 }
 
+function resolveLimeFontDirectory() {
+  const candidates = [
+    path.join(process.cwd(), "apps", "frontend", "public", "fonts"),
+    path.join(process.cwd(), "public", "fonts"),
+    path.resolve(__dirname, "../../../public/fonts"),
+  ];
+  const fontDirectory = candidates.find((candidate) => fs.existsSync(path.join(candidate, "Anton-Regular.ttf"))
+    && fs.existsSync(path.join(candidate, "Montserrat-Variable.ttf"))
+    && fs.existsSync(path.join(candidate, "Montserrat-ExtraBold.ttf")));
+  if (!fontDirectory) throw new Error(`Lime Slides fonts were not found. Checked: ${candidates.join(", ")}`);
+  return fontDirectory;
+}
+
+function resolveBrowserExecutable() {
+  const candidates = [
+    process.env.LIME_CHROME_EXECUTABLE_PATH,
+    process.env.CHROME_EXECUTABLE_PATH,
+    process.env.PROGRAMFILES ? path.join(process.env.PROGRAMFILES, "Google/Chrome/Application/chrome.exe") : undefined,
+    process.env["PROGRAMFILES(X86)"] ? path.join(process.env["PROGRAMFILES(X86)"], "Google/Chrome/Application/chrome.exe") : undefined,
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, "Google/Chrome/Application/chrome.exe") : undefined,
+    process.env.PROGRAMFILES ? path.join(process.env.PROGRAMFILES, "Microsoft/Edge/Application/msedge.exe") : undefined,
+    process.env["PROGRAMFILES(X86)"] ? path.join(process.env["PROGRAMFILES(X86)"], "Microsoft/Edge/Application/msedge.exe") : undefined,
+  ].filter((candidate): candidate is string => Boolean(candidate));
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
+}
+
 export async function renderLimeSceneClips(
   scenes: TimedLimeScene[],
   projectId: string
@@ -55,18 +81,24 @@ export async function renderLimeSceneClips(
   const startedAt = Date.now();
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), `lime-remotion-${projectId}-`));
   const entryPoint = resolveLimeRemotionEntryPoint();
-  // Scene visuals are inline SVG. Avoid copying the app's upload-heavy public
-  // directory into each temporary Remotion bundle.
+  // Scene visuals are inline SVG. Stage only the fonts instead of copying the
+  // app's upload-heavy public directory into each temporary Remotion bundle.
   const publicDir = path.join(directory, "public");
-  fs.mkdirSync(publicDir, { recursive: true });
+  const publicFontsDir = path.join(publicDir, "fonts");
+  fs.mkdirSync(publicFontsDir, { recursive: true });
+  const sourceFontsDir = resolveLimeFontDirectory();
+  for (const fontName of ["Anton-Regular.ttf", "Montserrat-Variable.ttf", "Montserrat-ExtraBold.ttf"]) {
+    fs.copyFileSync(path.join(sourceFontsDir, fontName), path.join(publicFontsDir, fontName));
+  }
   const serveUrl = await bundle({ entryPoint, outDir: path.join(directory, "bundle"), publicDir });
   const clips: RenderedLimeScene[] = new Array(scenes.length);
+  const browserExecutable = resolveBrowserExecutable();
 
   try {
     await runPool(scenes, 2, async (scene, index) => {
       const durationInFrames = Math.max(1, Math.round((scene.end - scene.start) * 30));
       const inputProps: LimeSceneProps = { ...scene, durationInFrames };
-      const composition = await selectComposition({ serveUrl, id: "LimeScene", inputProps: inputProps as any });
+      const composition = await selectComposition({ serveUrl, id: "LimeScene", inputProps: inputProps as any, browserExecutable });
       const outputPath = path.join(directory, `scene-${String(index).padStart(3, "0")}.mov`);
       await renderMedia({
         composition,
@@ -79,6 +111,7 @@ export async function renderLimeSceneClips(
         inputProps: inputProps as any,
         concurrency: 2,
         chromiumOptions: { gl: "angle" },
+        browserExecutable,
         logLevel: "error",
       });
       clips[index] = { path: outputPath, start: scene.start, end: scene.end, scene };

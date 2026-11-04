@@ -16,6 +16,21 @@ const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 let lastLimeQualityReport: LimeQualityReport | null = null;
 
+function resolveLimeFontsDir() {
+  const candidates = [
+    path.join(process.cwd(), "apps", "frontend", "public", "fonts"),
+    path.join(process.cwd(), "public", "fonts"),
+    path.resolve(__dirname, "../../public/fonts"),
+  ];
+  const fontsDir = candidates.find((candidate) => fs.existsSync(path.join(candidate, "Montserrat-ExtraBold.ttf")));
+  if (!fontsDir) throw new Error(`Lime Slides caption fonts were not found. Checked: ${candidates.join(", ")}`);
+  return fontsDir;
+}
+
+function escapeFilterPath(value: string) {
+  return value.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
+}
+
 export function getLastLimeQualityReport() {
   return lastLimeQualityReport;
 }
@@ -992,7 +1007,8 @@ export async function renderLimeSlidesVideo(options: {
   const assPath = path.join(os.tmpdir(), `lime_subtitles_${safeId}.ass`);
   const filterScriptPath = path.join(os.tmpdir(), `lime_filter_${safeId}.txt`);
   fs.writeFileSync(assPath, assContent, "utf8");
-  const safeAssPath = assPath.replace(/\\/g, "/").replace(/:/g, "\\:");
+  const safeAssPath = escapeFilterPath(assPath);
+  const safeFontsDir = escapeFilterPath(resolveLimeFontsDir());
   let faceTrackCoverage = cutoutVideo ? 1 : 0;
   let faceFallbackContain = !cutoutVideo;
   let speakerFilter: string | null = null;
@@ -1047,9 +1063,12 @@ export async function renderLimeSlidesVideo(options: {
     filterParts.push(`${effectMix}amix=inputs=${effectInputs.length}:duration=longest:dropout_transition=0,volume=0.35[fx]`);
     if (hasAudio) filterParts.push(`[0:a]aresample=44100[orig];[orig][fx]amix=inputs=2:duration=first:dropout_transition=0,loudnorm=I=-14.1:TP=-2.0:LRA=11[aout]`);
     else filterParts.push(`anullsrc=r=44100:cl=stereo:d=${durationSec.toFixed(2)}[orig];[orig][fx]amix=inputs=2:duration=first:dropout_transition=0[aout]`);
-    filterParts.push(`[${lastLayer}]ass='${safeAssPath}'[outv]`);
+    filterParts.push(`[${lastLayer}]ass=filename='${safeAssPath}':fontsdir='${safeFontsDir}'[outv]`);
     fs.writeFileSync(filterScriptPath, filterParts.join(";\n"), "utf8");
-    const cmd = `"${ffmpeg}" -y ${inputsCmd} -filter_complex_script "${filterScriptPath}" -map [outv] -map [aout] -c:v libx264 -profile:v main -level 4.0 -preset superfast -crf 23 -pix_fmt yuv420p -c:a aac -ar 44100 -ac 2 -b:a 128k -movflags +faststart -t ${durationSec.toFixed(2)} "${outputPath}"`;
+    const preview = process.env.LIME_RENDER_PREVIEW === "true";
+    const preset = preview ? "superfast" : "medium";
+    const crf = preview ? 23 : 18;
+    const cmd = `"${ffmpeg}" -y ${inputsCmd} -filter_complex_script "${filterScriptPath}" -map [outv] -map [aout] -c:v libx264 -profile:v main -level 4.0 -preset ${preset} -crf ${crf} -pix_fmt yuv420p -c:a aac -ar 44100 -ac 2 -b:a 128k -movflags +faststart -t ${durationSec.toFixed(2)} "${outputPath}"`;
     try {
       await execAsync(cmd, { maxBuffer: 12 * 1024 * 1024, timeout: 60 * 60 * 1000 });
     } catch (error: any) {
