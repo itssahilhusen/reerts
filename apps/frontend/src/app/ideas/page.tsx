@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { SwiperaStudioWorkspace } from "@/components/workspace/SwiperaStudioWorkspace";
 
 export default function IdeasPage() {
-  return <WorkspaceShell initialView="ideas" />;
+  return <SwiperaStudioWorkspace initialTab="ideas" />;
 }

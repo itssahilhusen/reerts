@@ -1,12 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  poweredByHeader: false,
+  compress: true,
   experimental: {
+    optimizePackageImports: ["lucide-react", "date-fns"],
     serverComponentsExternalPackages: [
       "@remotion/bundler",
       "@remotion/renderer",
       "@ffmpeg-installer/ffmpeg",
       "@ffprobe-installer/ffprobe",
+      "@mediapipe/tasks-vision",
+      "puppeteer",
+      "puppeteer-core",
+      "fluent-ffmpeg",
+      "ioredis",
     ],
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
   },
   images: {
     remotePatterns: [

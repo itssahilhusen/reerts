@@ -1147,7 +1147,7 @@ export function CarouselView({ onOpenComposer }: CarouselViewProps) {
          ========================================================================= */}
       <button
         type="button"
-        onClick={() => toast.info("Posteady AI Support & Feedback")}
+        onClick={() => toast.info("Reerts AI Support & Feedback")}
         className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 size-11 rounded-full bg-neutral-600 hover:bg-neutral-700 text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 z-20"
         title="Help & Feedback"
       >

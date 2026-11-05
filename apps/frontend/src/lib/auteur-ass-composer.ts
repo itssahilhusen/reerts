@@ -1,4 +1,4 @@
-import { AuteurEditPlan, PlannedScene } from "./gemini-video-pipeline";
+import { RathEditPlan, AuteurEditPlan, PlannedScene } from "./gemini-video-pipeline";
 import { VIDEO_TEMPLATES } from "@/data/videoTemplates";
 
 export type StyleLayoutFamily =
@@ -11,7 +11,21 @@ export type StyleLayoutFamily =
   | "editorial_magazine"
   | "neon_cyber"
   | "hype_verdict"
-  | "blueprint_dashboard";
+  | "blueprint_dashboard"
+  | "sketchbook"
+  | "dossier_investigative"
+  | "swiss_grid"
+  | "collage_paper"
+  | "glass_prism"
+  | "bento_grid"
+  | "card_deck"
+  | "phone_mockup"
+  | "sticker_talk"
+  | "documentary"
+  | "saas_dashboard"
+  | "faceless_globe"
+  | "retro_vhs"
+  | "kinetic_type";
 
 export interface StyleVisualConfig {
   styleId: string;
@@ -68,7 +82,7 @@ export function formatSmpteTimecode(seconds: number, fps = 30): string {
 }
 
 /**
- * Exact lookup table for all 56 Makerzz studio styles so every single style ID
+ * Exact lookup table for all 56 Reerts studio styles so every single style ID
  * resolves to its authentic name, palette, and layout family.
  */
 const EXACT_STYLE_CATALOG: Record<
@@ -84,6 +98,7 @@ const EXACT_STYLE_CATALOG: Record<
     isDark: boolean;
   }
 > = {
+  // 1. Glitch
   "classified-yt": {
     name: "Glitch",
     family: "split_explainer",
@@ -94,6 +109,7 @@ const EXACT_STYLE_CATALOG: Record<
     highlightText: "#0B0B0E",
     isDark: true,
   },
+  // 2. Lime Slides
   limeslides: {
     name: "Lime Slides",
     family: "lime_slides",
@@ -104,6 +120,7 @@ const EXACT_STYLE_CATALOG: Record<
     highlightText: "#C6FF3D",
     isDark: false,
   },
+  // 3. Forest Edit
   "cap-forest": {
     name: "Forest Edit",
     family: "editorial_magazine",
@@ -114,6 +131,7 @@ const EXACT_STYLE_CATALOG: Record<
     highlightText: "#0F291E",
     isDark: true,
   },
+  // 4. Paper Studio
   "cap-paper": {
     name: "Paper Studio",
     family: "paper_studio",
@@ -124,6 +142,7 @@ const EXACT_STYLE_CATALOG: Record<
     highlightText: "#111111",
     isDark: false,
   },
+  // 5. Rank Rush
   "fmt-countdown": {
     name: "Rank Rush",
     family: "hype_verdict",
@@ -134,6 +153,7 @@ const EXACT_STYLE_CATALOG: Record<
     highlightText: "#0B0B0E",
     isDark: true,
   },
+  // 6. Three Act
   "split-act": {
     name: "Three Act",
     family: "split_explainer",
@@ -144,536 +164,565 @@ const EXACT_STYLE_CATALOG: Record<
     highlightText: "#FFFFFF",
     isDark: true,
   },
-  "cap-obsidian": {
-    name: "Obsidian Desk",
-    family: "blueprint_dashboard",
-    bg: "0x0D0F14",
-    border: "0xF59E0B",
-    grid: "0x1E293B",
-    highlight: "#F59E0B",
-    highlightText: "#0D0F14",
-    isDark: true,
-  },
-  "cap-cobalt": {
-    name: "Cobalt Sun",
-    family: "editorial_magazine",
-    bg: "0xFBF7F0",
-    border: "0x1D4ED8",
-    grid: "0xBFDBFE",
-    highlight: "#F97316",
-    highlightText: "#FFFFFF",
-    isDark: false,
-  },
-  "fmt-chalk": {
-    name: "Chalk Talk",
-    family: "chalkboard",
-    bg: "0x191B18",
-    border: "0xFDE047",
-    grid: "0x2D312B",
-    highlight: "#FDE047",
-    highlightText: "#191B18",
-    isDark: true,
-  },
-  "cap-editorial": {
-    name: "Editorial Cut",
-    family: "editorial_magazine",
-    bg: "0x18181B",
-    border: "0xFACC15",
-    grid: "0x3F3F46",
-    highlight: "#FACC15",
-    highlightText: "#111111",
-    isDark: true,
-  },
-  "split-proof": {
-    name: "Live Proof",
-    family: "split_explainer",
-    bg: "0x0B0E14",
-    border: "0x38BDF8",
-    grid: "0x1E293B",
-    highlight: "#38BDF8",
-    highlightText: "#0B0E14",
-    isDark: true,
-  },
-  "cap-receipt": {
-    name: "Receipt Roll",
-    family: "receipt_roll",
-    bg: "0xEFECE6",
-    border: "0x18181B",
-    grid: "0xD4D0C8",
-    highlight: "#DC2626",
-    highlightText: "#FFFFFF",
-    isDark: false,
-  },
-  "cap-kinetic": {
-    name: "Kinetic Word",
-    family: "hype_verdict",
-    bg: "0x09090B",
-    border: "0xA855F7",
-    grid: "0x27272A",
-    highlight: "#A855F7",
+  // 7. Kinetic Type
+  kinetic: {
+    name: "Kinetic Type",
+    family: "kinetic_type",
+    bg: "0x000000",
+    border: "0xFFFFFF",
+    grid: "0x333333",
+    highlight: "#FF3B4E",
     highlightText: "#FFFFFF",
     isDark: true,
   },
-  "cap-marker": {
-    name: "Dry Erase",
-    family: "whiteboard_marker",
-    bg: "0xF8FAFC",
-    border: "0x1D4ED8",
-    grid: "0xCBD5E1",
-    highlight: "#1D4ED8",
-    highlightText: "#FFFFFF",
-    isDark: false,
-  },
-  "fmt-myth": {
-    name: "Myth vs Fact",
-    family: "hype_verdict",
-    bg: "0x0F1115",
-    border: "0x10B981",
-    grid: "0x27272A",
-    highlight: "#10B981",
-    highlightText: "#06281E",
-    isDark: true,
-  },
-  "split-versus": {
-    name: "Versus",
-    family: "split_explainer",
-    bg: "0x0C0C10",
-    border: "0xF97316",
-    grid: "0x27272A",
-    highlight: "#F97316",
-    highlightText: "#FFFFFF",
-    isDark: true,
-  },
+  // 8. Sketchbook
   "frame-sketch": {
     name: "Sketchbook",
-    family: "paper_studio",
-    bg: "0xF5EFE2",
-    border: "0x1E3A8A",
-    grid: "0x93C5FD",
+    family: "sketchbook",
+    bg: "0xF5EFEB",
+    border: "0x2563EB",
+    grid: "0xE2D9D0",
     highlight: "#DC2626",
     highlightText: "#FFFFFF",
     isDark: false,
   },
-  "fmt-mistakes": {
-    name: "Red X / Green Check",
-    family: "hype_verdict",
-    bg: "0x0B0B0E",
-    border: "0xEF4444",
-    grid: "0x27272A",
-    highlight: "#22C55E",
-    highlightText: "#052E16",
-    isDark: true,
+  // 9. Case File
+  "frame-dossier": {
+    name: "Case File",
+    family: "dossier_investigative",
+    bg: "0xE8E3D9",
+    border: "0x854D0E",
+    grid: "0xD1C9BC",
+    highlight: "#EAB308",
+    highlightText: "#422006",
+    isDark: false,
   },
-  "split-react": {
-    name: "Watch Together",
+  // 10. Swiss Grid
+  swiss: {
+    name: "Swiss Grid",
+    family: "swiss_grid",
+    bg: "0xFFFFFF",
+    border: "0xDC2626",
+    grid: "0xE5E7EB",
+    highlight: "#DC2626",
+    highlightText: "#FFFFFF",
+    isDark: false,
+  },
+  // 11. Paper Collage
+  collage: {
+    name: "Paper Collage",
+    family: "collage_paper",
+    bg: "0xF7F4EC",
+    border: "0x1E293B",
+    grid: "0xE2DDD2",
+    highlight: "#F59E0B",
+    highlightText: "#1E293B",
+    isDark: false,
+  },
+  // 12. Graphics First
+  "kallaway-broll": {
+    name: "Graphics First",
     family: "split_explainer",
-    bg: "0x0B0B0E",
-    border: "0xFACC15",
+    bg: "0x09090B",
+    border: "0x3B82F6",
     grid: "0x27272A",
-    highlight: "#FACC15",
-    highlightText: "#0B0B0E",
+    highlight: "#3B82F6",
+    highlightText: "#FFFFFF",
     isDark: true,
   },
-  "frame-Blueprint": {
-    name: "Blueprint",
-    family: "blueprint_dashboard",
-    bg: "0x0B2545",
-    border: "0xFACC15",
-    grid: "0x1D4ED8",
-    highlight: "#FACC15",
-    highlightText: "#0B2545",
+  // 13. Split Stack
+  splitstack: {
+    name: "Split Stack",
+    family: "split_explainer",
+    bg: "0x0F291E",
+    border: "0x34D399",
+    grid: "0x164E38",
+    highlight: "#34D399",
+    highlightText: "#064E3B",
     isDark: true,
   },
+  // 14. Side by Side
+  "split-duo": {
+    name: "Side by Side",
+    family: "editorial_magazine",
+    bg: "0xFBF7F0",
+    border: "0x0F291E",
+    grid: "0xE5E1D8",
+    highlight: "#0F291E",
+    highlightText: "#FFFFFF",
+    isDark: false,
+  },
+  // 15. Blueprint
   "frame-blueprint": {
     name: "Blueprint",
     family: "blueprint_dashboard",
     bg: "0x0B2545",
     border: "0xFACC15",
-    grid: "0x1D4ED8",
+    grid: "0x134074",
     highlight: "#FACC15",
     highlightText: "#0B2545",
     isDark: true,
   },
-  "fmt-beforeafter": {
-    name: "Before -> After",
-    family: "split_explainer",
-    bg: "0x0D0F12",
-    border: "0x10B981",
-    grid: "0x1E293B",
-    highlight: "#10B981",
-    highlightText: "#042F2E",
-    isDark: true,
-  },
-  "split-story": {
-    name: "Story Beat",
-    family: "split_explainer",
-    bg: "0x141210",
-    border: "0xF59E0B",
-    grid: "0x292524",
-    highlight: "#F59E0B",
-    highlightText: "#141210",
-    isDark: true,
-  },
-  "frame-neon": {
-    name: "Neon Rim",
-    family: "neon_cyber",
-    bg: "0x080711",
-    border: "0x22D3EE",
-    grid: "0x1E1B4B",
-    highlight: "#EC4899",
-    highlightText: "#FFFFFF",
-    isDark: true,
-  },
-  "fmt-3rules": {
-    name: "Three Rules",
-    family: "hype_verdict",
-    bg: "0x121214",
-    border: "0xFACC15",
-    grid: "0x27272A",
-    highlight: "#FACC15",
-    highlightText: "#121214",
-    isDark: true,
-  },
-  "split-chart": {
-    name: "Numbers Talk",
-    family: "blueprint_dashboard",
-    bg: "0x090D16",
-    border: "0x38BDF8",
-    grid: "0x1E293B",
-    highlight: "#38BDF8",
-    highlightText: "#090D16",
-    isDark: true,
-  },
-  "frame-press": {
-    name: "Press Clip",
-    family: "editorial_magazine",
-    bg: "0xF4F1EA",
-    border: "0x111111",
-    grid: "0xD6D3D1",
-    highlight: "#FDE047",
-    highlightText: "#111111",
-    isDark: false,
-  },
-  "fmt-storytime": {
-    name: "Storytime",
-    family: "editorial_magazine",
-    bg: "0x171412",
-    border: "0xFBBF24",
-    grid: "0x292524",
-    highlight: "#FBBF24",
-    highlightText: "#171412",
-    isDark: true,
-  },
-  "split-steps": {
-    name: "Step Ladder",
-    family: "split_explainer",
-    bg: "0x0B0F19",
-    border: "0x38BDF8",
-    grid: "0x1E293B",
-    highlight: "#FACC15",
-    highlightText: "#0B0F19",
-    isDark: true,
-  },
-  "frame-terminal": {
-    name: "HUD Frame",
-    family: "neon_cyber",
-    bg: "0x050B07",
-    border: "0x22C55E",
-    grid: "0x14532D",
-    highlight: "#22C55E",
-    highlightText: "#050B07",
-    isDark: true,
-  },
-  "fmt-hot-take": {
-    name: "Hot Take",
-    family: "hype_verdict",
-    bg: "0x140808",
-    border: "0xEF4444",
-    grid: "0x3F1515",
-    highlight: "#EF4444",
-    highlightText: "#FFFFFF",
-    isDark: true,
-  },
-  "split-quote": {
-    name: "Pull Quote",
-    family: "editorial_magazine",
-    bg: "0x131210",
-    border: "0xF59E0B",
-    grid: "0x292524",
-    highlight: "#F59E0B",
-    highlightText: "#131210",
-    isDark: true,
-  },
-  "frame- taped": {
-    name: "Taped Print",
-    family: "paper_studio",
-    bg: "0xEFECE6",
-    border: "0x1C1917",
-    grid: "0xD6D3D1",
-    highlight: "#FACC15",
-    highlightText: "#1C1917",
-    isDark: false,
-  },
-  "frame-taped": {
-    name: "Taped Print",
-    family: "paper_studio",
-    bg: "0xEFECE6",
-    border: "0x1C1917",
-    grid: "0xD6D3D1",
-    highlight: "#FACC15",
-    highlightText: "#1C1917",
-    isDark: false,
-  },
-  "fmt-case-study": {
-    name: "Case File",
-    family: "editorial_magazine",
-    bg: "0x12110E",
-    border: "0xD4AF37",
-    grid: "0x2E2B24",
-    highlight: "#D4AF37",
-    highlightText: "#12110E",
-    isDark: true,
-  },
-  "split-checklist": {
-    name: "Live Checklist",
-    family: "split_explainer",
-    bg: "0x0B0F17",
-    border: "0x10B981",
-    grid: "0x1E293B",
-    highlight: "#10B981",
-    highlightText: "#052E16",
-    isDark: true,
-  },
-  "frame-glass": {
-    name: "Frosted Card",
-    family: "blueprint_dashboard",
-    bg: "0x0F172A",
-    border: "0x38BDF8",
-    grid: "0x1E293B",
-    highlight: "#38BDF8",
-    highlightText: "#0F172A",
-    isDark: true,
-  },
-  "fmt-tier": {
-    name: "Tier List",
-    family: "hype_verdict",
-    bg: "0x09090B",
-    border: "0xEF4444",
-    grid: "0x27272A",
-    highlight: "#FACC15",
-    highlightText: "#09090B",
-    isDark: true,
-  },
-  "split-news": {
-    name: "Ticker Desk",
-    family: "split_explainer",
-    bg: "0x0B0B0E",
-    border: "0xEF4444",
-    grid: "0x27272A",
-    highlight: "#EF4444",
-    highlightText: "#FFFFFF",
-    isDark: true,
-  },
-  "frame-vhs": {
-    name: "Camcorder '98",
-    family: "neon_cyber",
-    bg: "0x0B0A0E",
-    border: "0xF59E0B",
-    grid: "0x27272A",
-    highlight: "#F59E0B",
-    highlightText: "#0B0A0E",
-    isDark: true,
-  },
-  "fmt-quiz": {
-    name: "Pop Quiz",
-    family: "hype_verdict",
-    bg: "0x0F172A",
-    border: "0xFACC15",
-    grid: "0x1E293B",
-    highlight: "#FACC15",
-    highlightText: "#0F172A",
-    isDark: true,
-  },
-  "frame-window": {
-    name: "Desktop Window",
-    family: "blueprint_dashboard",
-    bg: "0x1E1E24",
+  // 16. Prism Glass
+  "frame-prism": {
+    name: "Prism Glass",
+    family: "glass_prism",
+    bg: "0x0A0A0F",
     border: "0x60A5FA",
-    grid: "0x3F3F46",
-    highlight: "#60A5FA",
-    highlightText: "#09090B",
+    grid: "0x1E1E2E",
+    highlight: "#C084FC",
+    highlightText: "#0A0A0F",
     isDark: true,
   },
-  "fmt-unpopular": {
-    name: "Red Stamp",
-    family: "hype_verdict",
-    bg: "0x110C0C",
-    border: "0xDC2626",
-    grid: "0x291D1D",
-    highlight: "#DC2626",
-    highlightText: "#FFFFFF",
+  // 17. Bento Box
+  "frame-bento": {
+    name: "Bento Box",
+    family: "bento_grid",
+    bg: "0x0F172A",
+    border: "0x38BDF8",
+    grid: "0x1E293B",
+    highlight: "#38BDF8",
+    highlightText: "#0F172A",
     isDark: true,
   },
-  "frame-duotone": {
-    name: "Duotone Club",
-    family: "neon_cyber",
-    bg: "0x140B29",
+  // 18. Card Deck
+  "split-deck": {
+    name: "Card Deck",
+    family: "card_deck",
+    bg: "0x2E1065",
     border: "0xF43F5E",
-    grid: "0x2E1065",
+    grid: "0x4C1D95",
     highlight: "#F43F5E",
     highlightText: "#FFFFFF",
     isDark: true,
   },
-  "fmt-tl-dr": {
-    name: "TL;DR",
-    family: "hype_verdict",
-    bg: "0x09090B",
-    border: "0xFACC15",
-    grid: "0x27272A",
-    highlight: "#FACC15",
-    highlightText: "#09090B",
-    isDark: true,
-  },
-  "frame-minimal": {
-    name: "Hairline",
-    family: "editorial_magazine",
-    bg: "0xF7F5F0",
-    border: "0x18181B",
-    grid: "0xE4E2DD",
-    highlight: "#18181B",
-    highlightText: "#F7F5F0",
-    isDark: false,
-  },
-  "fmt-recap": {
-    name: "60-Second Recap",
-    family: "split_explainer",
-    bg: "0x0B0B0E",
-    border: "0x38BDF8",
-    grid: "0x27272A",
-    highlight: "#38BDF8",
-    highlightText: "#0B0B0E",
-    isDark: true,
-  },
-  "frame-spotlight": {
-    name: "Spotlight",
-    family: "editorial_magazine",
-    bg: "0x09090B",
-    border: "0xFDE047",
-    grid: "0x18181B",
-    highlight: "#FDE047",
-    highlightText: "#09090B",
-    isDark: true,
-  },
-  "fmt-roadmap": {
-    name: "Roadmap",
-    family: "blueprint_dashboard",
-    bg: "0x0B132B",
-    border: "0x38BDF8",
-    grid: "0x1C2541",
-    highlight: "#38BDF8",
-    highlightText: "#0B132B",
-    isDark: true,
-  },
-  "frame-comic": {
-    name: "Halftone",
-    family: "hype_verdict",
-    bg: "0xFFFBEB",
-    border: "0x111111",
-    grid: "0xFDE68A",
-    highlight: "#EF4444",
-    highlightText: "#FFFFFF",
-    isDark: false,
-  },
-  "fmt-pros-cons": {
-    name: "Pros & Cons",
-    family: "split_explainer",
-    bg: "0x0B0F17",
-    border: "0x22C55E",
-    grid: "0x1E293B",
-    highlight: "#22C55E",
-    highlightText: "#052E16",
-    isDark: true,
-  },
-  "frame-polaroid": {
-    name: "Instant Film",
-    family: "paper_studio",
-    bg: "0xF5F2EB",
-    border: "0x1C1917",
-    grid: "0xE7E5E4",
-    highlight: "#EA580C",
-    highlightText: "#FFFFFF",
-    isDark: false,
-  },
-  "fmt-glossary": {
-    name: "Word of the Day",
-    family: "editorial_magazine",
-    bg: "0xFAF8F5",
-    border: "0x18181B",
-    grid: "0xE7E5E4",
-    highlight: "#FACC15",
-    highlightText: "#18181B",
-    isDark: false,
-  },
-  "frame-ticker": {
-    name: "Market Tape",
-    family: "blueprint_dashboard",
-    bg: "0x070B12",
-    border: "0x10B981",
-    grid: "0x1E293B",
-    highlight: "#10B981",
-    highlightText: "#052E16",
-    isDark: true,
-  },
-  "fmt-numbered": {
-    name: "Big Numerals",
-    family: "hype_verdict",
-    bg: "0x09090B",
-    border: "0xFACC15",
-    grid: "0x27272A",
-    highlight: "#FACC15",
-    highlightText: "#09090B",
-    isDark: true,
-  },
-  "frame-zine": {
-    name: "Cut-Out Zine",
-    family: "paper_studio",
-    bg: "0xF4EFE6",
-    border: "0x111111",
-    grid: "0xD6D3D1",
+  // 19. Phone in Frame
+  "split-phone": {
+    name: "Phone in Frame",
+    family: "phone_mockup",
+    bg: "0xFDF2F8",
+    border: "0xEC4899",
+    grid: "0xFCE7F3",
     highlight: "#EC4899",
     highlightText: "#FFFFFF",
     isDark: false,
   },
-  "fmt-verdict": {
-    name: "Final Verdict",
-    family: "hype_verdict",
-    bg: "0x0C0A09",
-    border: "0xF59E0B",
-    grid: "0x292524",
-    highlight: "#F59E0B",
-    highlightText: "#0C0A09",
+  // 20. Launch Demo
+  "fmt-demo": {
+    name: "Launch Demo",
+    family: "bento_grid",
+    bg: "0x18181B",
+    border: "0xA855F7",
+    grid: "0x27272A",
+    highlight: "#34D399",
+    highlightText: "#064E3B",
     isDark: true,
   },
-  "frame-splitband": {
-    name: "Cinema Band",
-    family: "editorial_magazine",
-    bg: "0x09090B",
-    border: "0xE4E4E7",
-    grid: "0x27272A",
+  // 21. Chalk Talk
+  "fmt-chalk": {
+    name: "Chalk Talk",
+    family: "chalkboard",
+    bg: "0x1B2A1E",
+    border: "0xEAB308",
+    grid: "0x243828",
     highlight: "#FACC15",
+    highlightText: "#1B2A1E",
+    isDark: true,
+  },
+  // 22. Dry Erase
+  "cap-marker": {
+    name: "Dry Erase",
+    family: "whiteboard_marker",
+    bg: "0xF8FAFC",
+    border: "0x1D4ED8",
+    grid: "0xE2E8F0",
+    highlight: "#DC2626",
+    highlightText: "#FFFFFF",
+    isDark: false,
+  },
+  // 23. Sticker Talk
+  sticker: {
+    name: "Sticker Talk",
+    family: "sticker_talk",
+    bg: "0x111827",
+    border: "0xEF4444",
+    grid: "0x1F2937",
+    highlight: "#FACC15",
+    highlightText: "#111827",
+    isDark: true,
+  },
+  // 24. Editorial Cards
+  editorial: {
+    name: "Editorial Cards",
+    family: "editorial_magazine",
+    bg: "0xFAF8F5",
+    border: "0x475569",
+    grid: "0xE2E8F0",
+    highlight: "#E2E8F0",
+    highlightText: "#0F172A",
+    isDark: false,
+  },
+  // 25. Documentary
+  documentary: {
+    name: "Documentary",
+    family: "documentary",
+    bg: "0x141414",
+    border: "0xD4AF37",
+    grid: "0x262626",
+    highlight: "#D4AF37",
+    highlightText: "#141414",
+    isDark: true,
+  },
+  // 26. SaaS Dashboard
+  dashboard: {
+    name: "SaaS Dashboard",
+    family: "saas_dashboard",
+    bg: "0x0B0F19",
+    border: "0x3B82F6",
+    grid: "0x1E293B",
+    highlight: "#3B82F6",
+    highlightText: "#FFFFFF",
+    isDark: true,
+  },
+  // 27. Faceless Explainer
+  "faceless-explainer": {
+    name: "Faceless Explainer",
+    family: "split_explainer",
+    bg: "0x0F172A",
+    border: "0x38BDF8",
+    grid: "0x1E293B",
+    highlight: "#38BDF8",
+    highlightText: "#0F172A",
+    isDark: true,
+  },
+  // 28. Doodle Story
+  "doodle-story": {
+    name: "Doodle Story",
+    family: "sketchbook",
+    bg: "0xFFFBEB",
+    border: "0x000000",
+    grid: "0xFEF3C7",
+    highlight: "#F59E0B",
+    highlightText: "#000000",
+    isDark: false,
+  },
+  // 29. Geoglobe
+  geoglobe: {
+    name: "Geoglobe",
+    family: "faceless_globe",
+    bg: "0x0A0E1A",
+    border: "0x10B981",
+    grid: "0x132238",
+    highlight: "#10B981",
+    highlightText: "#0A0E1A",
+    isDark: true,
+  },
+  // 30. Countryballs
+  countryballs: {
+    name: "Countryballs",
+    family: "sticker_talk",
+    bg: "0x1E3A8A",
+    border: "0xEF4444",
+    grid: "0x1E40AF",
+    highlight: "#FACC15",
+    highlightText: "#1E3A8A",
+    isDark: true,
+  },
+  // 31. Field Guide 3D
+  catcharium: {
+    name: "Field Guide 3D",
+    family: "documentary",
+    bg: "0x064E3B",
+    border: "0x6EE7B7",
+    grid: "0x047857",
+    highlight: "#6EE7B7",
+    highlightText: "#064E3B",
+    isDark: true,
+  },
+  // 32. Story from clips
+  story: {
+    name: "Story from clips",
+    family: "editorial_magazine",
+    bg: "0x1C1917",
+    border: "0xF97316",
+    grid: "0x292524",
+    highlight: "#F97316",
+    highlightText: "#FFFFFF",
+    isDark: true,
+  },
+  // 33. Desk Collage
+  deskcollage: {
+    name: "Desk Collage",
+    family: "collage_paper",
+    bg: "0xEFECE6",
+    border: "0x334155",
+    grid: "0xCBD5E1",
+    highlight: "#F43F5E",
+    highlightText: "#FFFFFF",
+    isDark: false,
+  },
+  // 34. Neon Glitch
+  neon: {
+    name: "Neon Glitch",
+    family: "neon_cyber",
+    bg: "0x05050A",
+    border: "0x06B6D4",
+    grid: "0x1E1B4B",
+    highlight: "#F43F5E",
+    highlightText: "#FFFFFF",
+    isDark: true,
+  },
+  // 35. Breaking News
+  newsroom: {
+    name: "Breaking News",
+    family: "split_explainer",
+    bg: "0x7F1D1D",
+    border: "0xFACC15",
+    grid: "0x991B1B",
+    highlight: "#FACC15",
+    highlightText: "#7F1D1D",
+    isDark: true,
+  },
+  // 36. Tutorial
+  tutorial: {
+    name: "Tutorial",
+    family: "bento_grid",
+    bg: "0x0F172A",
+    border: "0x22C55E",
+    grid: "0x1E293B",
+    highlight: "#22C55E",
+    highlightText: "#0F172A",
+    isDark: true,
+  },
+  // 37. Retro VHS
+  vhs: {
+    name: "Retro VHS",
+    family: "retro_vhs",
+    bg: "0x18181B",
+    border: "0x06B6D4",
+    grid: "0x27272A",
+    highlight: "#F43F5E",
+    highlightText: "#FFFFFF",
+    isDark: true,
+  },
+  // 38. Hot Seat
+  "fmt-hottake": {
+    name: "Hot Seat",
+    family: "hype_verdict",
+    bg: "0x450A0A",
+    border: "0xF97316",
+    grid: "0x7F1D1D",
+    highlight: "#EF4444",
+    highlightText: "#FFFFFF",
+    isDark: true,
+  },
+  // 39. Chapter Book
+  "fmt-storytime": {
+    name: "Chapter Book",
+    family: "editorial_magazine",
+    bg: "0xFBF8F1",
+    border: "0x854D0E",
+    grid: "0xE7E0CE",
+    highlight: "#B45309",
+    highlightText: "#FFFFFF",
+    isDark: false,
+  },
+  // 40. Myth Buster
+  "fmt-mythfact": {
+    name: "Myth Buster",
+    family: "split_explainer",
+    bg: "0x0B0B0E",
+    border: "0x10B981",
+    grid: "0x27272A",
+    highlight: "#EF4444",
+    highlightText: "#FFFFFF",
+    isDark: true,
+  },
+  // 41. Just Landed
+  "fmt-deal": {
+    name: "Just Landed",
+    family: "hype_verdict",
+    bg: "0x064E3B",
+    border: "0xFACC15",
+    grid: "0x047857",
+    highlight: "#FACC15",
+    highlightText: "#064E3B",
+    isDark: true,
+  },
+  // 42. Glowline
+  "cap-glowline": {
+    name: "Glowline",
+    family: "neon_cyber",
+    bg: "0x09090B",
+    border: "0xA855F7",
+    grid: "0x18181B",
+    highlight: "#C084FC",
     highlightText: "#09090B",
     isDark: true,
+  },
+  // 43. Slapword
+  "cap-slap": {
+    name: "Slapword",
+    family: "kinetic_type",
+    bg: "0x000000",
+    border: "0xFACC15",
+    grid: "0x18181B",
+    highlight: "#FACC15",
+    highlightText: "#000000",
+    isDark: true,
+  },
+  // 44. Velvet
+  "cap-velvet": {
+    name: "Velvet",
+    family: "editorial_magazine",
+    bg: "0x2E1065",
+    border: "0xF472B6",
+    grid: "0x3B0764",
+    highlight: "#F472B6",
+    highlightText: "#2E1065",
+    isDark: true,
+  },
+  // 45. Receipt Roll
+  "cap-receipt": {
+    name: "Receipt Roll",
+    family: "receipt_roll",
+    bg: "0xFAF8F5",
+    border: "0x18181B",
+    grid: "0xE5E1D8",
+    highlight: "#18181B",
+    highlightText: "#FAF8F5",
+    isDark: false,
+  },
+  // 46. Nightline
+  "cap-nightline": {
+    name: "Nightline",
+    family: "split_explainer",
+    bg: "0x020617",
+    border: "0x38BDF8",
+    grid: "0x0F172A",
+    highlight: "#38BDF8",
+    highlightText: "#020617",
+    isDark: true,
+  },
+  // 47. Price Drop
+  "cap-dealtag": {
+    name: "Price Drop",
+    family: "hype_verdict",
+    bg: "0x7F1D1D",
+    border: "0xFACC15",
+    grid: "0x991B1B",
+    highlight: "#FACC15",
+    highlightText: "#7F1D1D",
+    isDark: true,
+  },
+  // 48. Chrome Candy
+  "cap-chrome": {
+    name: "Chrome Candy",
+    family: "glass_prism",
+    bg: "0x18181B",
+    border: "0xE879F9",
+    grid: "0x27272A",
+    highlight: "#38BDF8",
+    highlightText: "#18181B",
+    isDark: true,
+  },
+  // 49. Orbit
+  "frame-orbit": {
+    name: "Orbit",
+    family: "lime_slides",
+    bg: "0x09090B",
+    border: "0x22C55E",
+    grid: "0x18181B",
+    highlight: "#22C55E",
+    highlightText: "#09090B",
+    isDark: true,
+  },
+  // 50. Cover Story
+  "frame-elevate": {
+    name: "Cover Story",
+    family: "editorial_magazine",
+    bg: "0xF8FAFC",
+    border: "0x0F172A",
+    grid: "0xE2E8F0",
+    highlight: "#0F172A",
+    highlightText: "#FFFFFF",
+    isDark: false,
+  },
+  // 51. Sliding Seam
+  "split-seam": {
+    name: "Sliding Seam",
+    family: "split_explainer",
+    bg: "0x0F172A",
+    border: "0xF59E0B",
+    grid: "0x1E293B",
+    highlight: "#F59E0B",
+    highlightText: "#0F172A",
+    isDark: true,
+  },
+  // 52. Diagonal Cut
+  "split-slash": {
+    name: "Diagonal Cut",
+    family: "split_explainer",
+    bg: "0x111827",
+    border: "0xEC4899",
+    grid: "0x1F2937",
+    highlight: "#EC4899",
+    highlightText: "#FFFFFF",
+    isDark: true,
+  },
+  // 53. Corner Cam
+  "split-pip": {
+    name: "Corner Cam",
+    family: "bento_grid",
+    bg: "0x09090B",
+    border: "0x6366F1",
+    grid: "0x18181B",
+    highlight: "#6366F1",
+    highlightText: "#FFFFFF",
+    isDark: true,
+  },
+  // 54. Magazine Spread
+  "split-mag": {
+    name: "Magazine Spread",
+    family: "editorial_magazine",
+    bg: "0xFAF5EF",
+    border: "0x1C1917",
+    grid: "0xE7E0D3",
+    highlight: "#1C1917",
+    highlightText: "#FAF5EF",
+    isDark: false,
+  },
+  // 55. AI-UGC in Sticker Talk
+  ugc: {
+    name: "AI-UGC in Sticker Talk",
+    family: "sticker_talk",
+    bg: "0x0F172A",
+    border: "0xFACC15",
+    grid: "0x1E293B",
+    highlight: "#FACC15",
+    highlightText: "#0F172A",
+    isDark: true,
+  },
+  // 56. AI-UGC in Editorial Cards
+  "ugc-2": {
+    name: "AI-UGC in Editorial Cards",
+    family: "editorial_magazine",
+    bg: "0xF1F5F9",
+    border: "0x3B82F6",
+    grid: "0xCBD5E1",
+    highlight: "#3B82F6",
+    highlightText: "#FFFFFF",
+    isDark: false,
   },
 };
 
 /**
- * Returns the visual theme configuration for any of the 56 Makerzz studio styles
+ * Resolves the visual configuration for any of the 56 Reerts Studio styles
  */
-export function getStyleVisualConfig(styleId: string): StyleVisualConfig {
-  const rawId = (styleId || "cap-paper").trim();
+export function getStyleVisualConfig(rawStyleId?: string): StyleVisualConfig {
+  const rawId = (rawStyleId || "cap-paper").trim();
   const id = rawId.toLowerCase();
 
-  // Direct match from our 56-style catalog (case-insensitive)
   const exact =
     EXACT_STYLE_CATALOG[rawId] ||
     EXACT_STYLE_CATALOG[id] ||
@@ -713,73 +762,17 @@ export function getStyleVisualConfig(styleId: string): StyleVisualConfig {
     };
   }
 
-  // Fallback keyword matching for custom or legacy style IDs — always preserve tpl.name if present
-  const preserveName = (baseCfg: StyleVisualConfig): StyleVisualConfig => ({
-    ...baseCfg,
-    styleId: rawId,
-    styleName: tpl?.name || baseCfg.styleName,
-  });
-
-  if (id.includes("marker") || id.includes("dry") || id.includes("erase")) {
-    return preserveName(getStyleVisualConfig("cap-marker"));
-  }
-  if (id.includes("chalk")) {
-    return preserveName(getStyleVisualConfig("fmt-chalk"));
-  }
-  if (id.includes("receipt")) {
-    return preserveName(getStyleVisualConfig("cap-receipt"));
-  }
-  if (id.includes("lime")) {
-    return preserveName(getStyleVisualConfig("limeslides"));
-  }
-  if (id.includes("forest")) {
-    return preserveName(getStyleVisualConfig("cap-forest"));
-  }
-  if (id.includes("sketch") || id.includes("collage")) {
-    return preserveName(getStyleVisualConfig("frame-sketch"));
-  }
-  if (id.includes("blueprint")) {
-    return preserveName(getStyleVisualConfig("frame-Blueprint"));
-  }
-  if (id.includes("documentary") || id.includes("case") || id.includes("cinema") || id.includes("gold")) {
-    return {
-      styleId: rawId,
-      styleName: tpl?.name || "Documentary",
-      layoutFamily: "editorial_magazine",
-      canvasBgHex: "0x12110E",
-      cardBorderHex: "0xD4AF37",
-      gridLineHex: "0x2E2B24",
-      highlightHex: "#D4AF37",
-      highlightTextHex: "#12110E",
-      metaTextAssColor: hexToAssColor("#D4AF37"),
-      headlinePrimaryAssColor: hexToAssColor("#F7F4EB"),
-      headlineSecondaryAssColor: hexToAssColor("#F5C542"),
-      captionActiveAssColor: hexToAssColor("#F5C542"),
-      captionDimAssColor: hexToAssColor("#8C857B"),
-      badgeBgAssColor: hexToAssColor("#D4AF37"),
-      badgeTextAssColor: hexToAssColor("#12110E"),
-      isDarkCanvas: true,
-    };
-  }
-  if (id.includes("classified") || id.includes("glitch") || id.includes("crime")) {
-    return {
-      ...getStyleVisualConfig("classified-yt"),
-      styleId: rawId,
-      styleName: rawId === "classified" ? "Classified" : tpl?.name || "Glitch",
-    };
-  }
-
-  // Default / Paper Studio
-  const fallbackPaper = EXACT_STYLE_CATALOG["cap-paper"];
+  // Fallback defaults to Paper Studio
+  const fallback = EXACT_STYLE_CATALOG["cap-paper"];
   return {
     styleId: rawId,
-    styleName: tpl?.name || fallbackPaper.name,
-    layoutFamily: fallbackPaper.family,
-    canvasBgHex: fallbackPaper.bg,
-    cardBorderHex: fallbackPaper.border,
-    gridLineHex: fallbackPaper.grid,
-    highlightHex: fallbackPaper.highlight,
-    highlightTextHex: fallbackPaper.highlightText,
+    styleName: tpl?.name || fallback.name,
+    layoutFamily: fallback.family,
+    canvasBgHex: fallback.bg,
+    cardBorderHex: fallback.border,
+    gridLineHex: fallback.grid,
+    highlightHex: fallback.highlight,
+    highlightTextHex: fallback.highlightText,
     metaTextAssColor: hexToAssColor("#4B4843"),
     headlinePrimaryAssColor: hexToAssColor("#FFFFFF"),
     headlineSecondaryAssColor: hexToAssColor("#FFFFFF"),
@@ -813,7 +806,7 @@ export function resolveSceneHeadlinePair(
     const firstWords = transcriptWords
       .slice(0, 6)
       .map((w) => sanitizeAssText(w.word).toUpperCase());
-    if (!rawH1 || rawH1 === "PAPER STUDIO") {
+    if (!rawH1 || rawH1 === "VIRAL EDIT") {
       return [
         firstWords.slice(0, 3).join(" "),
         firstWords.slice(3, 6).join(" "),
@@ -822,7 +815,7 @@ export function resolveSceneHeadlinePair(
   }
 
   if (rawH1 && rawH2) {
-    return [rawH1.slice(0, 22), rawH2.slice(0, 22)];
+    return [rawH1.slice(0, 24), rawH2.slice(0, 26)];
   }
 
   const words = rawH1.split(/\s+/).filter(Boolean);
@@ -830,35 +823,30 @@ export function resolveSceneHeadlinePair(
     const mid = Math.ceil(words.length / 2);
     return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")];
   }
-  return [rawH1 || "BIG NEWS", rawH2 || "TOP UPDATE"];
+  return [rawH1 || "KEY INSIGHT", rawH2 || "THE BREAKDOWN"];
 }
 
 export interface BuildAssOptions {
   styleId: string;
   durationSec: number;
-  plan?: AuteurEditPlan;
+  plan?: RathEditPlan;
   transcriptWords?: Array<{ word: string; start: number; end: number }>;
   headlineFallback?: string;
   subAccentFallback?: string;
-  /**
-   * When true (default), ASS script renders top headlines & proof pills directly.
-   * When false (used when 1080x1920 PNG scene plates render the rich browser/diagram/whiteboard stages),
-   * ASS renders the synchronized word-by-word seam captions + studio timecode metadata.
-   */
   includeSceneHeaders?: boolean;
 }
 
 /**
  * Generates an Advanced SubStation Alpha (.ass) file content for FFmpeg libass.
  */
-export function buildAuteurAssScript(options: BuildAssOptions): string {
+export function buildRathAssScript(options: BuildAssOptions): string {
   const {
     styleId,
     durationSec = 37.3,
     plan,
     transcriptWords = [],
-    headlineFallback = "SO BHAI SAAP",
-    subAccentFallback = "NEWS TOP NE",
+    headlineFallback = "VIRAL EDIT",
+    subAccentFallback = "KEY TAKEAWAYS",
     includeSceneHeaders = true,
   } = options;
 
@@ -870,10 +858,7 @@ export function buildAuteurAssScript(options: BuildAssOptions): string {
   const whiteAss = hexToAssColor("#FFFFFF");
   const yellowAss = hexToAssColor("#FACC15");
 
-  // Position of synchronized word-by-word captions depends on the layout family:
-  // - split_explainer / neon_cyber / hype_verdict / blueprint_dashboard: centered on the split-screen seam (x=540, y=1230)
-  // - whiteboard_marker / receipt_roll: centered on the top speaker lower-third (x=540, y=1115)
-  // - paper_studio / editorial_magazine / lime_slides / chalkboard: centered at lower-third (x=540, y=1230 when using plates, or x=92, y=1535 in legacy card mode)
+  // Caption placement depends on layout family
   const isChinBoard =
     theme.layoutFamily === "whiteboard_marker" ||
     theme.layoutFamily === "receipt_roll";
@@ -884,10 +869,21 @@ export function buildAuteurAssScript(options: BuildAssOptions): string {
     : isChinBoard
     ? 1110
     : 1235;
-  const captionAlign = includeSceneHeaders ? 1 : 5; // 5 = middle-center for seam caption pill, 1 = bottom-left for legacy card
+  const captionAlign = includeSceneHeaders ? 1 : 5;
+
+  // Font choices customized per layout family
+  let displayFont = "Liberation Sans";
+  let bodyFont = "Liberation Sans";
+  if (theme.layoutFamily === "editorial_magazine" || theme.layoutFamily === "documentary") {
+    displayFont = "Liberation Serif";
+  } else if (theme.layoutFamily === "chalkboard" || theme.layoutFamily === "sketchbook") {
+    displayFont = "Liberation Sans";
+  } else if (theme.layoutFamily === "blueprint_dashboard" || theme.layoutFamily === "saas_dashboard") {
+    displayFont = "Liberation Sans";
+  }
 
   const header = `[Script Info]
-Title: Makerzz Auteur Studio Composite (${theme.styleName})
+Title: Reerts Rath Studio Composite (${theme.styleName})
 ScriptType: v4.00+
 PlayResX: 1080
 PlayResY: 1920
@@ -899,10 +895,10 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
 Style: MetaLeft,JetBrains Mono,20,${theme.metaTextAssColor},${theme.metaTextAssColor},&H00000000,&H00000000,-1,0,0,0,100,100,1.5,0,1,0,0,7,0,0,0,1
 Style: MetaRight,JetBrains Mono,20,${theme.metaTextAssColor},${theme.metaTextAssColor},&H00000000,&H00000000,-1,0,0,0,100,100,1.5,0,1,0,0,9,0,0,0,1
 Style: Crosshair,JetBrains Mono,24,${theme.metaTextAssColor},${theme.metaTextAssColor},&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,5,0,0,0,1
-Style: Headline1,Liberation Sans,82,${theme.headlinePrimaryAssColor},${theme.headlinePrimaryAssColor},${blackAss},${blackAss},-1,0,0,0,100,100,1,0,1,4.5,3.5,8,40,40,0,1
-Style: Headline2,Liberation Sans,82,${theme.headlineSecondaryAssColor},${theme.headlineSecondaryAssColor},${blackAss},${blackAss},-1,0,0,0,100,100,1,0,1,4.5,3.5,8,40,40,0,1
+Style: Headline1,${displayFont},78,${theme.headlinePrimaryAssColor},${theme.headlinePrimaryAssColor},${blackAss},${blackAss},-1,0,0,0,100,100,1,0,1,4.5,3.5,8,40,40,0,1
+Style: Headline2,${displayFont},78,${theme.headlineSecondaryAssColor},${theme.headlineSecondaryAssColor},${blackAss},${blackAss},-1,0,0,0,100,100,1,0,1,4.5,3.5,8,40,40,0,1
 Style: ProofPill,JetBrains Mono,22,${theme.badgeTextAssColor},${theme.badgeTextAssColor},${theme.badgeBgAssColor},${theme.badgeBgAssColor},-1,0,0,0,100,100,1,0,3,10,0,8,40,40,0,1
-Style: KaraokeCap,Liberation Sans,46,${whiteAss},${theme.captionDimAssColor},${blackAss},&H99000000,-1,0,0,0,100,100,1.2,0,1,4.5,2.5,${captionAlign},30,30,0,1
+Style: KaraokeCap,${bodyFont},46,${whiteAss},${theme.captionDimAssColor},${blackAss},&H99000000,-1,0,0,0,100,100,1.2,0,1,4.5,2.5,${captionAlign},30,30,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -911,17 +907,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   const events: string[] = [];
 
   if (includeSceneHeaders) {
-    // 1. Static Studio Frame Crosshairs (+) at the 4 corners of the paper grid
+    // 1. Static Studio Crosshairs at 4 corners
     events.push(`Dialogue: 2,0:00:00.00,${endAss},Crosshair,,0,0,0,,{\\pos(42,96)}+`);
     events.push(`Dialogue: 2,0:00:00.00,${endAss},Crosshair,,0,0,0,,{\\pos(1038,96)}+`);
     events.push(`Dialogue: 2,0:00:00.00,${endAss},Crosshair,,0,0,0,,{\\pos(42,1668)}+`);
     events.push(`Dialogue: 2,0:00:00.00,${endAss},Crosshair,,0,0,0,,{\\pos(1038,1668)}+`);
 
-    // 2. Top-Right Studio Signature & Bottom-Right Spec Metadata
-    events.push(`Dialogue: 2,0:00:00.00,${endAss},MetaRight,,0,0,0,,{\\pos(1020,118)}EDITED BY MAKERZZ`);
+    // 2. Studio Signature & Resolution Spec
+    events.push(
+      `Dialogue: 2,0:00:00.00,${endAss},MetaRight,,0,0,0,,{\\pos(1020,118)}EDITED BY REERTS RATH · ${theme.styleName.toUpperCase()}`
+    );
     events.push(`Dialogue: 2,0:00:00.00,${endAss},MetaRight,,0,0,0,,{\\pos(1020,1614)}1080 × 1920 · 30 FPS`);
 
-    // 3. Bottom-Left Running SMPTE Timecode
+    // 3. Running SMPTE Timecode
     const stepSec = 0.5;
     for (let t = 0; t < totalDur; t += stepSec) {
       const tEnd = Math.min(totalDur, t + stepSec);
@@ -931,7 +929,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       );
     }
 
-    // 4. Multi-Scene Stacked Headlines & Top-Left Category Tag
+    // 4. Multi-Scene Stacked Headlines & Category Tag
     const scenes: PlannedScene[] =
       plan?.scenes && plan.scenes.length > 0
         ? plan.scenes
@@ -944,15 +942,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
               subAccent: plan?.subAccent || subAccentFallback,
               objective: "Hook",
               visualType: "split-hook",
-              badgeText: "BIG NEWS",
+              badgeText: "KEY TAKEAWAY",
               onScreenText: [headlineFallback, subAccentFallback],
             },
           ];
 
     scenes.forEach((scene, idx) => {
       const sStart = formatAssTime(scene.start);
-      const sEnd = formatAssTime(Math.min(totalDur, Math.max(scene.start + 1, scene.end)));
-      const topLeftLabel = sanitizeAssText(scene.badgeText || "BIG NEWS").toUpperCase();
+      const sEnd = formatAssTime(Math.min(totalDur, Math.max(scene.start + 0.8, scene.end)));
+      const topLeftLabel = sanitizeAssText(scene.badgeText || `SCENE 0${idx + 1}`).toUpperCase();
 
       events.push(
         `Dialogue: 3,${sStart},${sEnd},MetaLeft,,0,0,0,,{\\pos(60,118)}${topLeftLabel}`
@@ -977,37 +975,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         }
       }
     });
-  } else {
-    // Plate-overlay mode: subtle bottom SMPTE timecode & style signature
-    events.push(
-      `Dialogue: 2,0:00:00.00,${endAss},MetaRight,,0,0,0,,{\\pos(1035,1886)}${theme.styleName.toUpperCase()} · 1080×1920`
-    );
-    const stepSec = 0.5;
-    for (let t = 0; t < totalDur; t += stepSec) {
-      const tEnd = Math.min(totalDur, t + stepSec);
-      const tc = formatSmpteTimecode(t + 0.36, 30);
-      events.push(
-        `Dialogue: 2,${formatAssTime(t)},${formatAssTime(tEnd)},MetaLeft,,0,0,0,,{\\pos(45,1886)}${tc}`
-      );
-    }
   }
 
   // 5. Word-by-Word Highlighted Karaoke Captions
   const words =
     transcriptWords.length > 0
       ? transcriptWords
-      : [
-          { word: "Duniya", start: 0.1, end: 0.5 },
-          { word: "ka", start: 0.5, end: 0.7 },
-          { word: "sabse", start: 0.7, end: 1.1 },
-          { word: "bada", start: 1.1, end: 1.5 },
-          { word: "exchange", start: 1.5, end: 2.1 },
-          { word: "fir", start: 2.1, end: 2.4 },
-          { word: "se", start: 2.4, end: 2.6 },
-          { word: "hack", start: 2.6, end: 3.1 },
-          { word: "ho", start: 3.1, end: 3.4 },
-          { word: "gaya", start: 3.4, end: 3.9 },
-        ];
+      : (plan?.headline || headlineFallback)
+          .split(/\s+/)
+          .map((w, i) => ({
+            word: w,
+            start: Number((0.2 + i * 0.4).toFixed(2)),
+            end: Number((0.55 + i * 0.4).toFixed(2)),
+          }));
 
   const chunkSize = includeSceneHeaders ? 5 : 4;
   for (let i = 0; i < words.length; i += chunkSize) {
@@ -1032,13 +1012,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         const rawWord = sanitizeAssText(token.word);
         const displayWord = includeSceneHeaders ? rawWord : rawWord.toUpperCase();
         if (idx === wIdx) {
-          // Currently spoken word highlighted in vibrant yellow/accent
+          // Highlight currently spoken word
           return `{\\c${includeSceneHeaders ? theme.captionActiveAssColor : yellowAss}\\b1}${displayWord}`;
         } else if (idx < wIdx) {
-          // Already spoken words in crisp white bold
+          // Spoken words in white
           return `{\\c${whiteAss}\\b1}${displayWord}`;
         } else {
-          // Upcoming words in the phrase dimmed
+          // Upcoming words dimmed
           return `{\\c${theme.captionDimAssColor}\\b0}${displayWord}`;
         }
       });
@@ -1051,3 +1031,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
   return header + events.join("\n") + "\n";
 }
+
+/** Backward compatibility alias */
+export const buildAuteurAssScript = buildRathAssScript;

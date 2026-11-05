@@ -72,7 +72,7 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        // 3. Permissive demo login: if testing with demo@posteady.com or password "password123"
+        // 3. Permissive demo login: if testing with demo@reerts.com or password "password123"
         if (credentials.password === "password123" || email.includes("demo")) {
           try {
             let demoUser = await prisma.user.findUnique({ where: { email } });

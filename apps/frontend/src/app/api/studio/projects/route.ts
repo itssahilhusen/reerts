@@ -3,10 +3,11 @@ import fs from "fs";
 import {
   getAllVideoProjects,
   saveVideoProject,
+  getVideoProjectsStoreVersion,
   VideoProjectRecord,
 } from "@/lib/video-projects-store";
 import { VIDEO_TEMPLATES } from "@/data/videoTemplates";
-import { planVideoWithAuteur } from "@/lib/gemini-video-pipeline";
+import { planVideoWithRath } from "@/lib/gemini-video-pipeline";
 import {
   extractVideoThumbnail,
   inspectRenderedVideo,
@@ -16,12 +17,28 @@ import {
 import { renderWithCreatomate } from "@/lib/creatomate";
 import { transcribeVideoAudio, TranscriptionResult } from "@/lib/groq-transcriber";
 import { getStyleVisualConfig } from "@/lib/auteur-ass-composer";
-import { planLimeSlides, toAuteurEditPlan, type LimeAuteurEditPlan } from "@/lib/lime-director-schema";
+import { planLimeSlides, toRathEditPlan, type LimeRathEditPlan } from "@/lib/lime-director-schema";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const etag = getVideoProjectsStoreVersion();
+    const ifNoneMatch = req.headers.get("if-none-match");
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          ETag: etag,
+          "Cache-Control": "private, no-cache",
+        },
+      });
+    }
     const projects = getAllVideoProjects();
-    return NextResponse.json({ projects });
+    return NextResponse.json({ projects }, {
+      headers: {
+        ETag: etag,
+        "Cache-Control": "private, no-cache",
+      },
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -127,7 +144,7 @@ export async function POST(req: NextRequest) {
 
     saveVideoProject(newProject);
 
-    // Run async background processing with the full 4-stage Makerzz Auteur pipeline:
+    // Run async background processing with the full 4-stage Reerts Rath pipeline:
     // 1. Reading your video (TRANSCRIBING)
     // 2. Planning the edit (COMPOSING_GRAPHICS)
     // 3. Building every scene (COLOR_GRADING)
@@ -147,7 +164,7 @@ export async function POST(req: NextRequest) {
           saveVideoProject(newProject);
 
           try {
-            console.log(`[Auteur Pipeline] Stage 1 — Reading video: ${localVideoAbsolutePath}`);
+            console.log(`[Rath Pipeline] Stage 1 — Reading video: ${localVideoAbsolutePath}`);
             transcriptionResult = await transcribeVideoAudio(localVideoAbsolutePath);
 
             newProject.transcript = transcriptionResult.text;
@@ -160,12 +177,12 @@ export async function POST(req: NextRequest) {
             }
             saveVideoProject(newProject);
           } catch (transcribeErr: any) {
-            console.error("[Auteur Pipeline] Transcription failed:", transcribeErr.message);
+            console.error("[Rath Pipeline] Transcription failed:", transcribeErr.message);
             throw transcribeErr;
           }
         }
 
-        // Stage 2: Planning the edit (Auteur Scene Director + Live Research & Assets)
+        // Stage 2: Planning the edit (Rath Scene Director + Live Research & Assets)
         newProject.status = "COMPOSING_GRAPHICS";
         newProject.progress = 52;
         saveVideoProject(newProject);
@@ -173,14 +190,14 @@ export async function POST(req: NextRequest) {
         const actualDuration =
           transcriptionResult?.duration || source?.durationSec || 15;
 
-        const auteurPlan = isLimeSlides
-          ? toAuteurEditPlan(await planLimeSlides({
+        const rathPlan = isLimeSlides
+          ? toRathEditPlan(await planLimeSlides({
               topic: brief?.topic || source?.topic || projectTitle,
               transcript: transcriptionResult?.text || brief?.topic || source?.topic || "",
               transcriptionWords: transcriptionResult?.words || [],
               durationSec: actualDuration,
             }))
-          : await planVideoWithAuteur({
+          : await planVideoWithRath({
               topic: brief?.topic || source?.topic || projectTitle,
               styleName: firstStyle?.name || styleCfg.styleName,
               durationSec: actualDuration,
@@ -188,19 +205,19 @@ export async function POST(req: NextRequest) {
               transcription: transcriptionResult,
             });
 
-        newProject.captionText = auteurPlan.platformCaption;
-        newProject.scenes = auteurPlan.scenes;
-        if (isLimeSlides) newProject.limeBeats = (auteurPlan as LimeAuteurEditPlan).limeBeats || [];
-        newProject.researchVisits = auteurPlan.researchVisits;
-        newProject.assets = auteurPlan.assets;
-        newProject.checks = auteurPlan.checks;
+        newProject.captionText = rathPlan.platformCaption;
+        newProject.scenes = rathPlan.scenes;
+        if (isLimeSlides) newProject.limeBeats = (rathPlan as LimeRathEditPlan).limeBeats || [];
+        newProject.researchVisits = rathPlan.researchVisits;
+        newProject.assets = rathPlan.assets;
+        newProject.checks = rathPlan.checks;
         newProject.scenePlan = {
-          headline: auteurPlan.headline,
-          subAccent: auteurPlan.subAccent,
-          metricLabel: auteurPlan.metricLabel,
-          metricCount: auteurPlan.metricCount,
-          steps: auteurPlan.steps,
-          platformCaption: auteurPlan.platformCaption,
+          headline: rathPlan.headline,
+          subAccent: rathPlan.subAccent,
+          metricLabel: rathPlan.metricLabel,
+          metricCount: rathPlan.metricCount,
+          steps: rathPlan.steps,
+          platformCaption: rathPlan.platformCaption,
         };
         saveVideoProject(newProject);
 
@@ -220,7 +237,7 @@ export async function POST(req: NextRequest) {
                 projectId,
                 videoRelPath: userUploadedPath,
                 styleId: primaryStyleId,
-                plan: auteurPlan,
+                plan: rathPlan,
                 transcriptWords: newProject.transcriptWords,
                 durationSec: actualDuration,
                 avatarCutout: newProject.options?.avatarCutout,
@@ -230,20 +247,20 @@ export async function POST(req: NextRequest) {
                 projectId,
                 videoRelPath: userUploadedPath,
                 styleId: primaryStyleId,
-                plan: auteurPlan,
+                plan: rathPlan,
                 durationSec: actualDuration,
               });
             }
 
             if (!finalVideoUrl) {
               console.log(
-                `[Auteur Pipeline] Stage 3 — Building every scene in style '${primaryStyleId}' via FFmpeg + libass...`
+                `[Rath Pipeline] Stage 3 — Building every scene in style '${primaryStyleId}' via FFmpeg + libass...`
               );
               finalVideoUrl = await renderProjectVideo({
                 projectId,
                 videoRelPath: userUploadedPath,
                 styleId: primaryStyleId,
-                plan: auteurPlan,
+                plan: rathPlan,
                 transcriptWords: newProject.transcriptWords,
                 durationSec: actualDuration,
               });
@@ -279,10 +296,10 @@ export async function POST(req: NextRequest) {
               }
               newProject.outputVideoUrl = finalVideoUrl;
               newProject.thumbnailUrl = `/api/studio/video/thumb_${projectId}.jpg`;
-              console.log("[Auteur Pipeline] Final edited video URL:", finalVideoUrl);
+              console.log("[Rath Pipeline] Final edited video URL:", finalVideoUrl);
             }
           } catch (renderErr: any) {
-            console.error("[Auteur Pipeline] Video composite error:", renderErr.message);
+            console.error("[Rath Pipeline] Video composite error:", renderErr.message);
             throw renderErr;
           }
         }
@@ -291,9 +308,9 @@ export async function POST(req: NextRequest) {
         newProject.status = "READY";
         newProject.progress = 100;
         saveVideoProject(newProject);
-        console.log(`[Auteur Pipeline] Project ${projectId} is READY TO REVIEW.`);
+        console.log(`[Rath Pipeline] Project ${projectId} is READY TO REVIEW.`);
       } catch (err: any) {
-        console.error("[Auteur Pipeline] Async project processing fatal error:", err);
+        console.error("[Rath Pipeline] Async project processing fatal error:", err);
         newProject.status = "FAILED";
         newProject.progress = 100;
         newProject.errorMessage = err?.message || "Video processing failed.";
@@ -303,7 +320,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       project: newProject,
-      message: "Video edit started successfully with Makerzz Auteur pipeline",
+      message: "Video edit started successfully with Reerts Rath pipeline",
     });
   } catch (err: any) {
     return NextResponse.json(

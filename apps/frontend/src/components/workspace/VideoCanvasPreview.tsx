@@ -106,7 +106,7 @@ export function VideoCanvasPreview({
       const isGlitchClassified = activeStyle === "classified-yt" || activeStyle.includes("classified");
 
       // =========================================================================
-      // STYLE 1: PAPER STUDIO (Makerzz Signature Cream Grid Design)
+      // STYLE 1: PAPER STUDIO (Reerts Signature Cream Grid Design)
       // =========================================================================
       if (isPaperStudio) {
         // 1. Warm Cream Paper Background

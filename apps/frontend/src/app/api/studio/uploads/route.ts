@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
 import { getVideosDir } from "@/lib/video-renderer";
 import { probeVideoDuration } from "@/lib/groq-transcriber";
 
@@ -24,16 +26,20 @@ export async function POST(req: NextRequest) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
       const filePath = path.join(uploadDir, savedFileName);
-      fs.writeFileSync(filePath, buffer);
+      const writeStream = fs.createWriteStream(filePath);
+      const readable = Readable.fromWeb(file.stream() as any);
+      await pipeline(readable, writeStream);
 
-      // Probe real video duration
-      let probedDur = 30.0;
+      // Never invent a duration when the media probe fails: later scene timing
+      // and FFmpeg rendering both depend on this value being real.
+      let probedDur: number;
       try {
         probedDur = await probeVideoDuration(filePath);
-      } catch {}
+      } catch (error) {
+        try { fs.unlinkSync(filePath); } catch {}
+        throw error;
+      }
 
       const publicPath = `/uploads/videos/${savedFileName}`;
 

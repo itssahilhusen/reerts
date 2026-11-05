@@ -46,6 +46,8 @@ model User {
 
   accounts      Account[]
   sessions      Session[]
+
+  @@index([workspaceId])
 }
 
 model Account {
@@ -64,6 +66,7 @@ model Account {
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -72,6 +75,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -137,6 +142,8 @@ model PostVariant {
   status         String    @default("PENDING") // PENDING, PUBLISHED, FAILED
   publishedAt    DateTime?
   createdAt      DateTime  @default(now())
+
+  @@index([postId])
 }
 
 model BrandVoice {
@@ -152,6 +159,8 @@ model BrandVoice {
   isDefault      Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@index([workspaceId])
 }
 
 model Idea {
@@ -166,6 +175,8 @@ model Idea {
   convertedPostId String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@index([workspaceId])
 }
 
 model Carousel {
@@ -180,6 +191,8 @@ model Carousel {
   updatedAt   DateTime        @updatedAt
 
   slides      CarouselSlide[]
+
+  @@index([workspaceId])
 }
 
 model CarouselSlide {
@@ -195,6 +208,8 @@ model CarouselSlide {
   imageUrl   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([carouselId])
 }
 
 model Automation {
@@ -221,6 +236,8 @@ model Automation {
   updatedAt      DateTime        @updatedAt
 
   logs           AutomationLog[]
+
+  @@index([workspaceId])
 }
 
 model Lead {
@@ -233,6 +250,8 @@ model Lead {
   followed    Boolean   @default(false)
   status      String    @default("CONTACTED") // "CONTACTED", "CONVERTED", "OPTED_OUT"
   createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
 }
 
 model AutomationLog {
@@ -243,6 +262,8 @@ model AutomationLog {
   triggerEvent String
   outcome      String
   createdAt    DateTime   @default(now())
+
+  @@index([automationId])
 }
 
 model Competitor {
@@ -259,6 +280,8 @@ model Competitor {
   updatedAt   DateTime         @updatedAt
 
   posts       CompetitorPost[]
+
+  @@index([workspaceId])
 }
 
 model CompetitorPost {
@@ -271,6 +294,8 @@ model CompetitorPost {
   shares       Int        @default(0)
   postedAt     DateTime   @default(now())
   remixed      Boolean    @default(false)
+
+  @@index([competitorId])
 }
 
 model MediaAsset {
@@ -283,6 +308,8 @@ model MediaAsset {
   sizeBytes   Int       @default(0)
   folder      String    @default("default")
   createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
 }
 
 model Persona {

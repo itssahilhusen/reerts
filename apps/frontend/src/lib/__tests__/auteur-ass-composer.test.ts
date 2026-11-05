@@ -5,6 +5,7 @@ import {
   formatAssTime,
   formatSmpteTimecode,
   getStyleVisualConfig,
+  buildRathAssScript,
   buildAuteurAssScript,
 } from "../auteur-ass-composer";
 import { VIDEO_TEMPLATES } from "../../data/videoTemplates";
@@ -55,8 +56,8 @@ describe("auteur-ass-composer", () => {
     }
   });
 
-  it("builds a complete ASS script with crosshairs, EDITED BY MAKERZZ, stacked headlines, and karaoke captions", () => {
-    const ass = buildAuteurAssScript({
+  it("builds a complete ASS script with crosshairs, EDITED BY REERTS RATH, stacked headlines, and karaoke captions", () => {
+    const ass = buildRathAssScript({
       styleId: "cap-paper",
       durationSec: 12,
       transcriptWords: [
@@ -74,7 +75,7 @@ describe("auteur-ass-composer", () => {
 
     assert.ok(ass.includes("PlayResX: 1080"));
     assert.ok(ass.includes("PlayResY: 1920"));
-    assert.ok(ass.includes("EDITED BY MAKERZZ"));
+    assert.ok(ass.includes("EDITED BY REERTS RATH"));
     assert.ok(ass.includes("1080 × 1920 · 30 FPS"));
     assert.ok(ass.includes("SO BHAI SAAP"));
     assert.ok(ass.includes("NEWS TOP NE"));

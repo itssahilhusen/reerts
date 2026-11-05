@@ -1,14 +1,17 @@
 import path from "path";
 import fs from "fs";
-import { AuteurEditPlan } from "./gemini-video-pipeline";
+import { RathEditPlan, AuteurEditPlan } from "./gemini-video-pipeline";
 
-export interface CreatomateAuteurOptions {
+export interface CreatomateRathOptions {
   projectId: string;
   videoRelPath: string;
   styleId: string;
-  plan: AuteurEditPlan;
+  plan: RathEditPlan;
   durationSec?: number;
 }
+
+/** Backward compatibility alias */
+export type CreatomateAuteurOptions = CreatomateRathOptions;
 
 /**
  * Upload local video to get a direct public URL for Creatomate ingestion
@@ -95,7 +98,7 @@ async function getPublicUrlForVideo(localVideoPath: string): Promise<string> {
 }
 
 /**
- * Render a complete Makerzz Auteur reel via Creatomate Cloud Multi-Track Engine:
+ * Render a complete Reerts Rath reel via Creatomate Cloud Multi-Track Engine:
  * - Cream background (#F4F1EA)
  * - Dynamic scene headlines & badges matching speech
  * - Central speaker take card with border & rounded corners
@@ -103,7 +106,7 @@ async function getPublicUrlForVideo(localVideoPath: string): Promise<string> {
  * - Timed scene transitions
  */
 export async function renderWithCreatomate(
-  options: CreatomateAuteurOptions
+  options: CreatomateRathOptions
 ): Promise<string | null> {
   const apiKey = process.env.CREATOMATE_API_KEY;
   if (!apiKey) {
@@ -127,10 +130,10 @@ export async function renderWithCreatomate(
     console.log("[Creatomate] Uploading video for cloud ingestion...");
     const publicVideoUrl = await getPublicUrlForVideo(localVideoPath);
 
-    // Style-specific color tokens matching Makerzz
+    // Style-specific color tokens matching Reerts Rath
     let bgColor = "#F4F1EA";       // Cream paper
     let titleColor = "#111111";
-    let accentColor = "#AE0006";   // Makerzz red
+    let accentColor = "#AE0006";   // Rath accent red
     let highlightBg = "#F59E0B";   // Golden yellow highlight
     let cardBorderColor = "#18181B";
 
@@ -182,7 +185,7 @@ export async function renderWithCreatomate(
       // 2. Scene 1 Pill Badge (Top)
       {
         type: "text",
-        text: s1.badgeText || "MAKERZZ",
+        text: s1.badgeText || "REERTS",
         time: 0,
         duration: s1.end,
         y: "7%",

@@ -33,7 +33,7 @@ export async function removeVideoBackgroundWithReplicate(
     throw new Error("Replicate video cutout supports uploads up to 100 MB in this pipeline.");
   }
   const sourceHash = await hashFile(sourcePath);
-  const cacheDir = path.join(os.tmpdir(), "makerzz-speaker-cutout-cache");
+  const cacheDir = path.join(os.tmpdir(), "rath-speaker-cutout-cache");
   const outputPath = path.join(cacheDir, `speaker_cutout_${sourceHash}.webm`);
   fs.mkdirSync(cacheDir, { recursive: true });
   const cacheTtlMs = 14 * 24 * 60 * 60 * 1000;

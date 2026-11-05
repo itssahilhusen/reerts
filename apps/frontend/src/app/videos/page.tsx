@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { SwiperaStudioWorkspace } from "@/components/workspace/SwiperaStudioWorkspace";
 
 export default function VideosPage() {
-  return <WorkspaceShell initialView="videos" />;
+  return <SwiperaStudioWorkspace initialTab="videos" />;
 }

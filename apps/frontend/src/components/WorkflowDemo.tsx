@@ -102,7 +102,7 @@ export function PlatformIcon({
   }
 }
 
-// 5 Step definitions matching Posteady exactly
+// 5 Step definitions matching Reerts exactly
 const STEPS = [
   { key: "persona", label: "Brand voice", duration: 18000 },
   { key: "discover", label: "Suggested ideas", duration: 15000 },
@@ -332,7 +332,7 @@ export function WorkflowDemo({ isDark = false }: { isDark?: boolean }) {
 
   return (
     <section id="workflow-demo" className="px-4 py-20 bg-background text-foreground transition-colors">
-      {/* 1. Header: Mirror of Posteady ShowcaseHeading */}
+      {/* 1. Header: Mirror of Reerts ShowcaseHeading */}
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 text-center">
         <div className="flex items-center justify-center">
           <ReertsLogo size={32} />

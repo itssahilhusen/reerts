@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
           analyzed_posts_count: p.analyzedPostsCount,
           analyzed_at: p.analyzedAt ? p.analyzedAt.toISOString() : null,
           updated_at: p.updatedAt.toISOString(),
-          updated_by_user: { full_name: "Workspace Member", email: "team@posteady.com" },
+          updated_by_user: { full_name: "Workspace Member", email: "team@reerts.com" },
           language: p.language,
           content_language: p.contentLanguage,
           sentence_structure_keep_original: p.sentenceStructureKeepOriginal,

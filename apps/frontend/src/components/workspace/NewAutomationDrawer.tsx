@@ -219,7 +219,7 @@ export function NewAutomationDrawer({
   // Step 5: Final DM ("And then, they will get")
   const [finalDm, setFinalDm] = useState("Here is your requested guide and instant link!");
   const [links, setLinks] = useState<{ label: string; url: string }[]>([
-    { label: "Get the link", url: "https://posteady.com" },
+    { label: "Get the link", url: "https://reerts.in" },
   ]);
 
   // DM-only trigger state
@@ -1006,7 +1006,7 @@ export function NewAutomationDrawer({
                           <button
                             type="button"
                             onClick={() =>
-                              setLinks([...links, { label: "Get the link", url: "https://posteady.com" }])
+                              setLinks([...links, { label: "Get the link", url: "https://reerts.in" }])
                             }
                             className="font-bold text-primary hover:underline text-[11px] inline-flex items-center gap-1"
                           >

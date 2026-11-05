@@ -10,7 +10,7 @@ const FACE_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_det
 const FACE_MODEL_PATH = [
   path.join(process.cwd(), "apps", "frontend", "public", "models", "blaze_face_short_range.tflite"),
   path.join(process.cwd(), "public", "models", "blaze_face_short_range.tflite"),
-].find((candidate) => fs.existsSync(candidate)) || path.join(os.tmpdir(), "makerzz-blaze-face-short-range.tflite");
+].find((candidate) => fs.existsSync(candidate)) || path.join(os.tmpdir(), "rath-blaze-face-short-range.tflite");
 
 export interface FaceSample {
   timeSec: number;
@@ -70,7 +70,7 @@ export async function detectSpeakerFaceTrack(
   puppeteer: any
 ): Promise<{ samples: FaceSample[]; coverage: number } | null> {
   if (!(await ensureFaceModel())) return null;
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "makerzz-face-samples-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rath-face-samples-"));
   let browser: any;
   let server: http.Server | undefined;
   let stage = "extract samples";
@@ -85,7 +85,8 @@ export async function detectSpeakerFaceTrack(
     if (!frames.length) return null;
 
     stage = "serve MediaPipe WASM";
-    const packageRoot = path.dirname(require.resolve("@mediapipe/tasks-vision/vision_wasm_internal.js"));
+    const resolvePath = (mod: string) => (eval("require.resolve") as typeof require.resolve)(mod);
+    const packageRoot = path.dirname(resolvePath("@mediapipe/tasks-vision/vision_wasm_internal.js"));
     const wasmNames = new Set(fs.readdirSync(packageRoot));
     server = http.createServer((req, res) => {
       const pathname = decodeURIComponent(new URL(req.url || "/", "http://localhost").pathname).slice(1);
@@ -112,7 +113,7 @@ export async function detectSpeakerFaceTrack(
     const page = await browser.newPage();
     page.on("pageerror", (error: Error) => console.warn("[Lime Slides] Face detector browser error:", error.message));
     page.on("requestfailed", (request: any) => console.warn("[Lime Slides] Face detector resource failed:", request.url(), request.failure()?.errorText));
-    await page.addScriptTag({ path: require.resolve("@mediapipe/tasks-vision/vision_bundle.js") });
+    await page.addScriptTag({ path: resolvePath("@mediapipe/tasks-vision/vision_bundle.js") });
     stage = "initialize MediaPipe face detector";
     await page.evaluate(async ({ baseUrl }) => {
       const vision = (window as any).Vision;
@@ -122,7 +123,7 @@ export async function detectSpeakerFaceTrack(
         runningMode: "IMAGE",
         minDetectionConfidence: 0.45,
       });
-      (window as any).__makerzzFaceDetector = detector;
+      (window as any).__rathFaceDetector = detector;
     }, { baseUrl });
 
     stage = "detect sampled faces";
@@ -133,7 +134,7 @@ export async function detectSpeakerFaceTrack(
         const image = new Image();
         image.src = imageUrl;
         await image.decode();
-        const detector = (window as any).__makerzzFaceDetector;
+        const detector = (window as any).__rathFaceDetector;
         const detections = detector.detect(image).detections || [];
         const face = detections
           .filter((item: any) => item.boundingBox && (item.categories?.[0]?.score ?? 0) >= 0.45)

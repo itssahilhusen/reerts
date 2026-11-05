@@ -128,14 +128,23 @@ export const RECOMMENDED_PRESETS: RecommendedCategoryDef[] = [
   },
 ];
 
+let cachedSources: StoredSource[] | null = null;
+let cachedSourcesMtime = 0;
+
 export function getStoredSources(): StoredSource[] {
   try {
     if (!fs.existsSync(SOURCES_FILE)) {
       saveStoredSources(DEFAULT_SOURCES);
       return DEFAULT_SOURCES;
     }
+    const stat = fs.statSync(SOURCES_FILE);
+    if (cachedSources && stat.mtimeMs === cachedSourcesMtime) {
+      return cachedSources;
+    }
     const data = JSON.parse(fs.readFileSync(SOURCES_FILE, "utf-8"));
-    return Array.isArray(data) ? data : DEFAULT_SOURCES;
+    cachedSources = Array.isArray(data) ? data : DEFAULT_SOURCES;
+    cachedSourcesMtime = stat.mtimeMs;
+    return cachedSources;
   } catch {
     return DEFAULT_SOURCES;
   }
@@ -145,11 +154,18 @@ export function saveStoredSources(sources: StoredSource[]) {
   try {
     const dir = path.dirname(SOURCES_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(SOURCES_FILE, JSON.stringify(sources, null, 2), "utf-8");
+    cachedSources = sources;
+    fs.writeFileSync(SOURCES_FILE, JSON.stringify(sources), "utf-8");
+    try {
+      cachedSourcesMtime = fs.statSync(SOURCES_FILE).mtimeMs;
+    } catch {}
   } catch (err) {
     console.error("Failed to save sources store:", err);
   }
 }
+
+let cachedIdeas: StoredIdea[] | null = null;
+let cachedIdeasMtime = 0;
 
 export function getStoredIdeas(): StoredIdea[] {
   try {
@@ -157,8 +173,14 @@ export function getStoredIdeas(): StoredIdea[] {
       saveStoredIdeas(DEFAULT_IDEAS);
       return DEFAULT_IDEAS;
     }
+    const stat = fs.statSync(IDEAS_FILE);
+    if (cachedIdeas && stat.mtimeMs === cachedIdeasMtime) {
+      return cachedIdeas;
+    }
     const data = JSON.parse(fs.readFileSync(IDEAS_FILE, "utf-8"));
-    return Array.isArray(data) ? data : DEFAULT_IDEAS;
+    cachedIdeas = Array.isArray(data) ? data : DEFAULT_IDEAS;
+    cachedIdeasMtime = stat.mtimeMs;
+    return cachedIdeas;
   } catch {
     return DEFAULT_IDEAS;
   }
@@ -168,7 +190,11 @@ export function saveStoredIdeas(ideas: StoredIdea[]) {
   try {
     const dir = path.dirname(IDEAS_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(IDEAS_FILE, JSON.stringify(ideas, null, 2), "utf-8");
+    cachedIdeas = ideas;
+    fs.writeFileSync(IDEAS_FILE, JSON.stringify(ideas), "utf-8");
+    try {
+      cachedIdeasMtime = fs.statSync(IDEAS_FILE).mtimeMs;
+    } catch {}
   } catch (err) {
     console.error("Failed to save ideas store:", err);
   }

@@ -73,7 +73,7 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [facelessTopic, setFacelessTopic] = useState("");
 
-  // Selected Style IDs (Makerzz allows picking up to 6 at once)
+  // Selected Style IDs (Reerts allows picking up to 6 at once)
   const [selectedStyleIds, setSelectedStyleIds] = useState<string[]>([
     "cap-paper",
   ]);
@@ -433,7 +433,7 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
     return true;
   });
 
-  // Calculate estimated credits based on Makerzz formula: base 100 + 40/shorts + styles
+  // Calculate estimated credits based on Reerts formula: base 100 + 40/shorts + styles
   const estimatedCredits = Math.max(100, selectedStyleIds.length * 60);
 
   return (
@@ -737,7 +737,7 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
                           </span>
                         </div>
 
-                        {/* Top-Right Selection Checkmark Pill (Exact Makerzz design) */}
+                        {/* Top-Right Selection Checkmark Pill (Exact Reerts design) */}
                         <div className="absolute top-2.5 right-2.5 z-10 pointer-events-none">
                           <span
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
@@ -1449,7 +1449,7 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
                   Projects
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Click any project to open the Makerzz Studio Review, quality checks, scene editor, and Behind the edit sources.
+                  Click any project to open the Rath Studio Review, quality checks, scene editor, and Behind the edit sources.
                 </p>
               </div>
               <button
@@ -1605,7 +1605,7 @@ export function VideosView({ onOpenComposer }: VideosViewProps) {
       </main>
 
       {/* ========================================================================= */}
-      {/* STICKY BOTTOM FLOATING ACTION BAR (EXACT MAKERZZ DOCK)                     */}
+      {/* STICKY BOTTOM FLOATING ACTION BAR (EXACT REERTS DOCK)                     */}
       {/* ========================================================================= */}
       {viewTab === "studio" && (
         <div className="fixed bottom-4 left-0 right-0 z-40 px-4 pointer-events-none">

@@ -94,19 +94,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create tailored variants for each platform
-    for (const plat of targetPlatforms) {
-      const tailored = AiEngine.tailorForPlatform(newPost.content, plat);
-      await prisma.postVariant.create({
-        data: {
-          postId: newPost.id,
-          platform: plat,
-          tailoredText: tailored,
-          status: newPost.status === "PUBLISHED" ? "PUBLISHED" : "PENDING",
-          publishedAt: newPost.status === "PUBLISHED" ? new Date() : null,
-        },
-      });
-    }
+    // Batch create tailored variants for all platforms in a single multi-row query
+    const variantsData = targetPlatforms.map((plat: string) => ({
+      postId: newPost.id,
+      platform: plat,
+      tailoredText: AiEngine.tailorForPlatform(newPost.content, plat),
+      status: newPost.status === "PUBLISHED" ? "PUBLISHED" : "PENDING",
+      publishedAt: newPost.status === "PUBLISHED" ? new Date() : null,
+    }));
+    await prisma.postVariant.createMany({ data: variantsData });
 
     const createdVariants = await prisma.postVariant.findMany({
       where: { postId: newPost.id },

@@ -1,13 +1,14 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { exec } from "child_process";
+import { exec, execFile } from "child_process";
 import { promisify } from "util";
 import { getFfmpegPath, getFfprobePath } from "./media-tool-paths";
 
 export { getFfmpegPath, getFfprobePath } from "./media-tool-paths";
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export interface WordTimestamp {
   word: string;
@@ -48,15 +49,19 @@ export function isValidApiKey(key?: string): boolean {
 export async function probeVideoDuration(videoFilePath: string): Promise<number> {
   try {
     const ffprobePath = getFfprobePath();
-    const { stdout } = await execAsync(
-      `"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoFilePath}"`
-    );
+    const { stdout } = await execFileAsync(ffprobePath, [
+      "-v", "error",
+      "-show_entries", "format=duration",
+      "-of", "default=noprint_wrappers=1:nokey=1",
+      videoFilePath,
+    ], { timeout: 30_000, maxBuffer: 1024 * 1024 });
     const dur = parseFloat(stdout.trim());
     if (!isNaN(dur) && dur > 0) return Math.round(dur * 100) / 100;
   } catch (err: any) {
-    console.warn("[Transcriber] ffprobe duration check warning:", err?.message || err);
+    console.error("[Transcriber] FFprobe could not read the uploaded video:", err?.message || err);
+    throw new Error(`Could not inspect uploaded video metadata with FFprobe: ${err?.message || "unknown error"}`);
   }
-  return 37.27;
+  throw new Error("FFprobe returned an invalid video duration.");
 }
 
 /**
@@ -285,6 +290,9 @@ export async function generateContentDerivedTranscription(params: {
  * 3. OpenAI Whisper (if valid OPENAI_API_KEY is configured)
  * 4. Content-derived audio interval transcription (real speech timing, NO hardcoded crypto/Binance)
  */
+// In-memory cache for transcription results to avoid repeated expensive audio extractions and API calls
+const transcriptionCache = new Map<string, { result: TranscriptionResult; mtimeMs: number }>();
+
 export async function transcribeVideoAudio(
   videoFilePath: string,
   options?: { topic?: string; language?: string }
@@ -292,6 +300,21 @@ export async function transcribeVideoAudio(
   if (!fs.existsSync(videoFilePath)) {
     throw new Error(`[Transcriber] Video file not found: ${videoFilePath}`);
   }
+
+  let fileMtime = 0;
+  try {
+    fileMtime = fs.statSync(videoFilePath).mtimeMs;
+    const cached = transcriptionCache.get(videoFilePath);
+    if (cached && cached.mtimeMs === fileMtime) {
+      console.log(`[Transcriber] Returning cached transcription for: ${path.basename(videoFilePath)}`);
+      return cached.result;
+    }
+  } catch {}
+
+  const cacheAndReturn = (result: TranscriptionResult): TranscriptionResult => {
+    transcriptionCache.set(videoFilePath, { result, mtimeMs: fileMtime });
+    return result;
+  };
 
   const probedDuration = await probeVideoDuration(videoFilePath);
   const groqApiKey = process.env.GROQ_API_KEY;
@@ -349,7 +372,7 @@ export async function transcribeVideoAudio(
                 ? data.segments.map((s: any) => ({ id: Number(s.id) || 0, start: Number(s.start), end: Number(s.end), text: String(s.text || "") }))
                 : fallbackTimed.segments;
               console.log(`[Transcriber] Groq Whisper transcribed ${data.words?.length || fallbackTimed.words.length} words.`);
-              return {
+              return cacheAndReturn({
                 text,
                 language: data.language || options?.language || "en",
                 duration,
@@ -362,7 +385,7 @@ export async function transcribeVideoAudio(
                       }))
                     : buildTimedWordsFromSegments(responseSegments, text, duration),
                 segments: responseSegments,
-              };
+              });
             }
           } else {
             console.warn("[Transcriber] Groq Whisper API error:", response.status, await response.text());
@@ -401,7 +424,7 @@ export async function transcribeVideoAudio(
                 ? data.segments.map((s: any) => ({ id: Number(s.id) || 0, start: Number(s.start), end: Number(s.end), text: String(s.text || "") }))
                 : fallbackTimed.segments;
               console.log("[Transcriber] OpenAI Whisper transcribed successfully.");
-              return {
+              return cacheAndReturn({
                 text,
                 language: data.language || "en",
                 duration,
@@ -414,7 +437,7 @@ export async function transcribeVideoAudio(
                       }))
                     : buildTimedWordsFromSegments(responseSegments, text, duration),
                 segments: responseSegments,
-              };
+              });
             }
           }
         } catch (openAiErr: any) {
@@ -429,7 +452,7 @@ export async function transcribeVideoAudio(
           const { GoogleGenAI } = await import("@google/genai");
           const ai = new GoogleGenAI({
             apiKey: geminiApiKey,
-            httpOptions: { headers: { "User-Agent": "makerzz-auteur" } },
+            httpOptions: { headers: { "User-Agent": "reerts-rath" } },
           });
           const audioBase64 = fs.readFileSync(tempAudioFile).toString("base64");
           const response = await ai.models.generateContent({
@@ -454,13 +477,13 @@ export async function transcribeVideoAudio(
             console.log("[Transcriber] Gemini 2.5 Flash transcribed audio successfully.");
             const speechIntervals = await detectAudioSpeechIntervals(videoFilePath, probedDuration);
             const { words, segments } = buildTimedWordsFromText(transcriptText, probedDuration, speechIntervals);
-            return {
+            return cacheAndReturn({
               text: transcriptText,
               language: options?.language || "en",
               duration: probedDuration,
               words,
               segments,
-            };
+            });
           }
         } catch (geminiErr: any) {
           console.warn("[Transcriber] Gemini transcription call error:", geminiErr?.message || geminiErr);

@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { TranscriptionResult, isValidApiKey } from "./groq-transcriber";
+import { searchCoverrVideos } from "./coverr-client";
 
 export interface PlannedScene {
   sceneId: string;
@@ -28,6 +29,7 @@ export interface ResearchItem {
   title: string;
   facts: string[];
   status: "ok" | "verified";
+  confidence?: number;
 }
 
 export interface VideoAssetRecord {
@@ -35,6 +37,7 @@ export interface VideoAssetRecord {
   badge: "screenshot" | "recording" | "logo" | "animation" | "cc_image";
   title: string;
   sourceUrl: string;
+  thumbnailUrl?: string;
   sceneIds: string[];
 }
 
@@ -45,7 +48,7 @@ export interface QualityCheckRecord {
   detail?: string;
 }
 
-export interface AuteurEditPlan {
+export interface RathEditPlan {
   headline: string;
   subAccent: string;
   metricLabel: string;
@@ -59,12 +62,83 @@ export interface AuteurEditPlan {
   cadenceWordsPerMin: number;
 }
 
+/** Backward compatibility alias */
+export type AuteurEditPlan = RathEditPlan;
+
 /**
- * Call LLM to analyze the real transcript and build the Makerzz Auteur scene plan
- * Validates API keys before calling so placeholder keys never throw 400 API_KEY_INVALID
+ * Call LLM to analyze the real transcript and build the Reerts Rath scene plan.
  */
 async function callLLM(prompt: string): Promise<string | null> {
-  // 1. Optional DeepSeek API if configured with a valid key
+  // 1. OpenAI API if configured
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (isValidApiKey(openaiKey)) {
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openaiKey}`,
+          "Content-Type": "application/json",
+        },
+        signal: AbortSignal.timeout(10000),
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are an elite short-form video director and motion graphics editor for Reerts Rath. Always respond in valid JSON with scene timing, headlines, visual assets, and quality checks.",
+            },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.3,
+          response_format: { type: "json_object" },
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const content = json.choices?.[0]?.message?.content;
+        if (content) return content;
+      }
+    } catch {}
+  }
+
+  // 2. Groq API (High-speed Llama / Qwen / GPT-OSS inference)
+  const groqApiKey = process.env.GROQ_API_KEY;
+  if (isValidApiKey(groqApiKey)) {
+    for (const model of ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"]) {
+      try {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${groqApiKey}`,
+            "Content-Type": "application/json",
+          },
+          signal: AbortSignal.timeout(10000),
+          body: JSON.stringify({
+            model,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are an elite short-form video director and motion graphics editor for Reerts Rath. Always respond in valid JSON with scene timing, headlines, visual assets, and quality checks.",
+              },
+              { role: "user", content: prompt },
+            ],
+            temperature: 0.3,
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          const content = json.choices?.[0]?.message?.content;
+          if (content) return content;
+        }
+      } catch {}
+    }
+  }
+
+  // 3. DeepSeek API if configured
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
   if (isValidApiKey(deepseekKey)) {
     try {
@@ -74,13 +148,14 @@ async function callLLM(prompt: string): Promise<string | null> {
           Authorization: `Bearer ${deepseekKey}`,
           "Content-Type": "application/json",
         },
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({
           model: "deepseek-chat",
           messages: [
             {
               role: "system",
               content:
-                "You are an elite short-form video director and motion graphics editor for Makerzz Auteur. Always respond in valid JSON.",
+                "You are an elite short-form video director and motion graphics editor for Reerts Rath. Always respond in valid JSON with scene timing, headlines, visual assets, and quality checks.",
             },
             { role: "user", content: prompt },
           ],
@@ -96,40 +171,7 @@ async function callLLM(prompt: string): Promise<string | null> {
     } catch {}
   }
 
-  // 2. Groq API if configured with a valid key
-  const groqApiKey = process.env.GROQ_API_KEY;
-  if (isValidApiKey(groqApiKey)) {
-    try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${groqApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are an elite short-form video director and motion graphics editor for Makerzz Auteur. Always respond in valid JSON.",
-            },
-            { role: "user", content: prompt },
-          ],
-          temperature: 0.3,
-          response_format: { type: "json_object" },
-        }),
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        const content = json.choices?.[0]?.message?.content;
-        if (content) return content;
-      }
-    } catch {}
-  }
-
-  // 3. Built-in Gemini 3.8 Flash (`gemini-3.8-flash`) if configured with a valid key
+  // 3. Gemini 2.5 Flash / 3.8 Flash API if configured
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (isValidApiKey(geminiApiKey)) {
     try {
@@ -137,12 +179,12 @@ async function callLLM(prompt: string): Promise<string | null> {
         apiKey: geminiApiKey,
         httpOptions: {
           headers: {
-            "User-Agent": "aistudio-build",
+            "User-Agent": "reerts-rath",
           },
         },
       });
       const res = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
+        model: process.env.GEMINI_VISION_MODEL || "gemini-3.8-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -156,331 +198,349 @@ async function callLLM(prompt: string): Promise<string | null> {
 }
 
 /**
- * Builds the exact Makerzz Auteur multi-beat scene plan matching `makerzz.edit.mp4`
+ * Extract key entities, numbers, and domains from transcript text
  */
-export function buildMakerzzReferenceScenes(totalDuration: number): PlannedScene[] {
-  const baseScenes: PlannedScene[] = [
-    {
-      sceneId: "s1",
-      start: 0.0,
-      end: 3.1,
-      headline: "Duniya Ka Sabse",
-      subAccent: "Bada Exchange Hack",
-      objective: "Split-screen browser proof: binance.com/zh-CN 335,387,860 users callout + speaker card below",
-      visualType: "browser-card",
-      badgeText: "binance.com/zh-CN",
-      onScreenText: ["335,387,860", "Binance Hack", "6.3 billion dollar"],
-    },
-    {
-      sceneId: "s2",
-      start: 3.1,
-      end: 9.6,
-      headline: "6.3 billion dollar",
-      subAccent: "Yes Binance head of",
-      objective: "Full impact banner: 6.3 BILLION DOLLAR LOSS + captured from binance.com warning modal",
-      visualType: "counter",
-      badgeText: "BINANCE",
-      onScreenText: ["6.3 BILLION DOLLAR", "LOSS", "captured from binance.com"],
-      stampText: "LOSS",
-    },
-    {
-      sceneId: "s3",
-      start: 9.6,
-      end: 13.5,
-      headline: "Why saab itta",
-      subAccent: "bada moon",
-      objective: "Wikimedia Commons CC BY-SA 4.0 Bitcoin coin viewfinder + WHY SAAB ITTA BADA MOON banner",
-      visualType: "coin-proof",
-      badgeText: "BITCOIN",
-      onScreenText: ["WHY SAAB ITTA BADA", "MOON", "Wikimedia Commons · CC BY-SA 4.0"],
-    },
-    {
-      sceneId: "s4",
-      start: 13.5,
-      end: 16.1,
-      headline: "Wo 6% 9",
-      subAccent: "8 % crash kar",
-      objective: "Split-screen numbered 01 / 02 crash cards + live speaker chart below",
-      visualType: "split-hook",
-      badgeText: "MARKET CRASH",
-      onScreenText: ["01  BTC -6% CRASH", "02  ETH -8% CRASH"],
-      stepProgress: "02/02",
-    },
-    {
-      sceneId: "s5",
-      start: 16.1,
-      end: 20.6,
-      headline: "Iske baad sabhi",
-      subAccent: "log ka paisa bidrol",
-      objective: "Full-screen 01 / 02 / 03 numbered list with yellow highlight bar + red PAISA GAYA stamp",
-      visualType: "steps",
-      badgeText: "PAISA BIDROL SHURU",
-      onScreenText: [
-        "01  SABHI LOG PAISA        WITHDRAW",
-        "02  BIDROL KARNE LAGE",
-        "03  COMPANY MAIN BHI       DEPOSIT",
-      ],
-      stampText: "PAISA GAYA",
-      stepProgress: "03/03",
-    },
-    {
-      sceneId: "s6",
-      start: 20.6,
-      end: 22.9,
-      headline: "Completely Freeze",
-      subAccent: "FI Registered Nahi",
-      objective: "Full-screen kinetic typography + giant tilted yellow FREEZ sticker",
-      visualType: "freeze-slam",
-      badgeText: "FI REGISTERED?",
-      onScreenText: ["COMPLETELY FREEZE LAGA DIYA.", "FI REGISTERED NAHI", "FREEZ"],
-      stampText: "FREEZ",
-    },
-    {
-      sceneId: "s7",
-      start: 22.9,
-      end: 25.6,
-      headline: "FI Registered Hai",
-      subAccent: "Par Matlab Ye Nahi",
-      objective: "Full-screen 3-node connected architecture diagram: Binance -> FI registered, Deposit, Safety",
-      visualType: "diagram",
-      badgeText: "BINANCE FIU",
-      onScreenText: ["Binance", "FI registered", "Deposit", "Safety"],
-    },
-    {
-      sceneId: "s8",
-      start: 25.6,
-      end: 29.0,
-      headline: "Deposit Ki Safety",
-      subAccent: "Guarantee Nahi",
-      objective: "Split-screen kinetic statement + bottom speaker card",
-      visualType: "split-hook",
-      badgeText: "DEPOSIT KI SAFETY",
-      onScreenText: ["AAPNE JUH PAISA", "DEPOSIT HERE KA", "AAPNA TAKHA HAI"],
-    },
-    {
-      sceneId: "s9",
-      start: 29.0,
-      end: 35.5,
-      headline: "do phir unjar",
-      subAccent: "ke paiseg a kya",
-      objective: "Full-screen 01 / 02 recovery breakdown + red SIRF ITNA stamp",
-      visualType: "steps",
-      badgeText: "PAISA KAHAN GAYA?",
-      onScreenText: [
-        "01  BINANCE KA KHENA       GAYA HAI",
-        "02  CRYPTO ISPORT          PAAS KARIG",
-      ],
-      stampText: "SIRF ITNA",
-      stepProgress: "02/02",
-    },
-    {
-      sceneId: "s10",
-      start: 35.5,
-      end: Math.min(totalDuration, 41.5),
-      headline: "aur simbas bhavak",
-      subAccent: "nahi jagar apni invest",
-      objective: "Closer: SAVE THIS + red arrow + APNI INVEST SE PEHLE JAIZA + bottom speaker card",
-      visualType: "cta",
-      badgeText: "SAVE THIS",
-      onScreenText: ["SAVE THIS", "APNI INVEST SE PEHLE", "JAIZA", "khud verity karo"],
-      stampText: "JAIZA",
-    },
-  ];
+function extractTranscriptEntities(text: string): {
+  keyTopics: string[];
+  numbers: string[];
+  probableDomains: string[];
+} {
+  const words = text.split(/\s+/);
+  const numbers: string[] = [];
+  const keyTopics: string[] = [];
 
-  if (totalDuration > 45) {
-    baseScenes.push(
-      {
-        sceneId: "s11",
-        start: 41.5,
-        end: 54.0,
-        headline: "Safest Indian",
-        subAccent: "NSDL & CDSL Invest",
-        objective: "Full-screen 01 / 02 / 03 Indian investment comparison + red SAFEST WAY stamp",
-        visualType: "steps",
-        badgeText: "INDIA INVEST",
-        onScreenText: [
-          "01  NSDL & CDSL            INDIAN EXCHANGE",
-          "02  MUTUAL FUNDS & FD      SAFE RETURNS",
-          "03  AVOID SPOT CRYPTO      HIGH RISK",
-        ],
-        stampText: "SAFEST WAY",
-        stepProgress: "03/03",
-      },
-      {
-        sceneId: "s12",
-        start: 54.0,
-        end: 66.0,
-        headline: "30% Crypto Tax",
-        subAccent: "Seedha Aapke Upar",
-        objective: "Full-screen 3-node Delta Exchange workflow diagram",
-        visualType: "diagram",
-        badgeText: "30% TAX ALERT",
-        onScreenText: ["Delta F&O", "Deposit INR", "Trade Safely", "Instant Withdraw"],
-      },
-      {
-        sceneId: "s13",
-        start: 66.0,
-        end: Number(totalDuration.toFixed(1)),
-        headline: "Trade Safely",
-        subAccent: "Link In Bio Now",
-        objective: "Closer CTA: SAVE THIS + ZERO 30% TAX + speaker card below",
-        visualType: "cta",
-        badgeText: "SAVE THIS",
-        onScreenText: ["SAVE THIS", "NO 30% TAX · NO FREEZE", "LINK IN BIO", "check official link"],
-        stampText: "LINK IN BIO",
-      }
-    );
-  } else {
-    baseScenes[baseScenes.length - 1].end = Number(totalDuration.toFixed(1));
+  // Find numbers or currency amounts
+  const numRegex = /(\$?\d+[\d,.]*(?:[kKmMbB]|%|billion|million|thousand)?)/g;
+  let match: RegExpExecArray | null;
+  while ((match = numRegex.exec(text)) !== null) {
+    if (match[1].length > 1 && !numbers.includes(match[1])) {
+      numbers.push(match[1]);
+    }
   }
 
-  return baseScenes;
+  // Find capitalized noun phrases
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i].replace(/[^a-zA-Z0-9]/g, "");
+    if (w.length > 3 && /^[A-Z]/.test(w) && !["This", "That", "When", "What", "Then", "Here", "With"].includes(w)) {
+      if (!keyTopics.includes(w)) keyTopics.push(w);
+    }
+  }
+
+  // Probable domain lookups based on recognized terms
+  const domainMap: Record<string, string> = {
+    ai: "openai.com",
+    gpt: "chatgpt.com",
+    claude: "anthropic.com",
+    gemini: "deepmind.google",
+    react: "react.dev",
+    next: "nextjs.org",
+    node: "nodejs.org",
+    python: "python.org",
+    figma: "figma.com",
+    github: "github.com",
+    apple: "apple.com",
+    google: "google.com",
+    tesla: "tesla.com",
+    reerts: "reerts.in",
+    rath: "reerts.in",
+  };
+
+  const probableDomains: string[] = [];
+  const lowerText = text.toLowerCase();
+  for (const [key, domain] of Object.entries(domainMap)) {
+    if (lowerText.includes(key)) {
+      probableDomains.push(domain);
+    }
+  }
+
+  return { keyTopics: keyTopics.slice(0, 5), numbers: numbers.slice(0, 4), probableDomains };
 }
 
-export async function planVideoWithAuteur(params: {
+/** Build scenes around the actual spoken phrases, sentence endings, and pauses. */
+export function buildDynamicScenesFromTranscript(
+  transcript: TranscriptionResult,
+  totalDuration: number,
+  topic: string
+): PlannedScene[] {
+  const words = (transcript.words || [])
+    .filter((word) => Number.isFinite(word.start) && Number.isFinite(word.end) && word.end > word.start)
+    .sort((a, b) => a.start - b.start);
+  const groups: typeof words[] = [];
+
+  if (words.length) {
+    let group = [words[0]];
+    for (let i = 1; i < words.length; i++) {
+      const previous = words[i - 1];
+      const next = words[i];
+      const elapsed = previous.end - group[0].start;
+      const pause = next.start - previous.end;
+      const sentenceEnded = /[.!?]$/.test(previous.word);
+      const shouldSplit = elapsed >= 2.6 && (sentenceEnded || pause >= 0.28 || elapsed >= 5.2);
+      if (shouldSplit) {
+        groups.push(group);
+        group = [];
+      }
+      group.push(next);
+      if (next.end - group[0].start >= 6.2) {
+        groups.push(group);
+        group = [];
+      }
+    }
+    if (group.length) groups.push(group);
+  } else if (transcript.segments?.length) {
+    for (const segment of transcript.segments) {
+      const segmentWords = segment.text.trim().split(/\s+/).filter(Boolean);
+      if (segmentWords.length) {
+        const duration = Math.max(0.1, segment.end - segment.start) / segmentWords.length;
+        groups.push(segmentWords.map((word, idx) => ({
+          word,
+          start: segment.start + duration * idx,
+          end: segment.start + duration * (idx + 1),
+        })));
+      }
+    }
+  }
+
+  // Faceless/topic-led projects have no spoken timestamps; use a short structure
+  // derived from the user's supplied topic rather than pretending it was spoken.
+  if (!groups.length) {
+    const topicWords = topic.split(/\s+/).filter(Boolean);
+    const step = Math.max(1, totalDuration / Math.max(1, Math.ceil(totalDuration / 4.5)));
+    for (let start = 0, i = 0; start < totalDuration; start += step, i++) {
+      groups.push(topicWords.slice(i * 3, i * 3 + 8).map((word, idx) => ({
+        word,
+        start: start + idx * 0.25,
+        end: Math.min(totalDuration, start + (idx + 1) * 0.25),
+      })));
+    }
+  }
+
+  return groups.map((group, i) => {
+    const start = Math.max(0, group[0]?.start || 0);
+    const end = Math.min(totalDuration, Math.max(start + 0.25, group[group.length - 1]?.end || start + 1));
+    const chunkWords = group.map((word) => word.word.replace(/[^\p{L}\p{N}'’-]/gu, "")).filter(Boolean);
+    const headline = chunkWords.slice(0, 4).join(" ") || topic.slice(0, 28);
+    const subAccent = chunkWords.slice(4, 8).join(" ");
+    const normalized = chunkWords.join(" ").toLowerCase();
+    const visualType: PlannedScene["visualType"] = i === 0
+      ? "split-hook"
+      : /\b(first|second|third|step|steps|number|top)\b/.test(normalized)
+        ? "steps"
+        : /\b(percent|million|billion|\d+|growth|price|cost|revenue)\b/.test(normalized)
+          ? "counter"
+          : /\b(how|why|because|works|process|system)\b/.test(normalized)
+            ? "diagram"
+            : "browser-card";
+    return {
+      sceneId: `s${i + 1}`,
+      start,
+      end,
+      headline: headline.toUpperCase(),
+      subAccent: subAccent.toUpperCase(),
+      objective: `Illustrate this spoken beat: ${group.map((word) => word.word).join(" ")}`,
+      visualType,
+      badgeText: i === 0 ? "HOOK" : `BEAT ${String(i + 1).padStart(2, "0")}`,
+      onScreenText: [headline, subAccent].filter(Boolean).map((text) => text.toUpperCase()),
+    };
+  });
+}
+
+/** Research records remain empty until a source has actually been fetched and checked. */
+function buildDynamicResearchVisits(
+  topic: string,
+  entities: ReturnType<typeof extractTranscriptEntities>
+): ResearchItem[] {
+  // Do not label guessed URLs or generated claims as researched/verified sources.
+  void topic;
+  void entities;
+  return [];
+}
+
+/** Stores only returned stock assets; these are optional and never fabricated. */
+async function buildDynamicAssets(
+  topic: string,
+  research: ResearchItem[],
+  scenes: PlannedScene[]
+): Promise<VideoAssetRecord[]> {
+  const assets: VideoAssetRecord[] = [];
+  const primaryUrl = research[0]?.url || "https://reerts.in";
+
+  // 1. Live Coverr stock video B-roll retrieval
+  try {
+    const coverrVideos = await searchCoverrVideos(topic, 2);
+    for (let i = 0; i < coverrVideos.length; i++) {
+      const vid = coverrVideos[i];
+      assets.push({
+        assetId: vid.id,
+        badge: "recording",
+        title: `Coverr B-roll · ${vid.title}`,
+        sourceUrl: vid.videoUrl,
+        thumbnailUrl: vid.thumbnailUrl,
+        sceneIds: [scenes[i + 1]?.sceneId || `s${i + 2}`],
+      });
+    }
+  } catch (err: any) {
+    console.warn("[Rath Director] Coverr asset fetch notice:", err?.message || err);
+  }
+
+  void primaryUrl;
+  return assets;
+}
+
+/**
+ * Planning cannot verify a rendered file, so report that check as pending.
+ */
+function buildDynamicChecks(totalDuration: number, wordCount: number): QualityCheckRecord[] {
+  return [
+    {
+      id: "render_review",
+      label: "Render quality review",
+      status: "warn",
+      detail: `Planning only (${totalDuration.toFixed(1)} s, ${wordCount} transcript words). Duration, framing, captions, audio, and safe areas have not been measured yet.`,
+    },
+  ];
+}
+
+function fallbackSceneLabel(scene: Partial<PlannedScene> | undefined): string {
+  return String(scene?.headline || scene?.onScreenText?.[0] || "").slice(0, 40);
+}
+
+/**
+ * Main Director Function: Plans the entire video edit with Reerts Rath.
+ * Fully dynamic: every scene, headline, research visit, asset, and caption
+ * is computed from the ACTUAL video transcript and duration.
+ */
+export async function planVideoWithRath(params: {
   topic?: string;
   styleName: string;
   durationSec?: number;
   language?: string;
   transcription?: TranscriptionResult;
-}): Promise<AuteurEditPlan> {
-  const totalDuration = params.transcription?.duration || params.durationSec || 41.03;
-  const transcriptText =
-    params.transcription?.text?.trim() ||
-    params.topic ||
-    "Duniya ka sabse bada exchange fir se hack ho gaya 6.3 billion dollar Binance hack";
-  const wordCount = params.transcription?.words?.length || 95;
-  const wpm = Math.round(wordCount / (totalDuration / 60) || 142);
+}): Promise<RathEditPlan> {
+  const totalDuration = params.transcription?.duration || params.durationSec || 37.27;
+  const transcriptText = (params.transcription?.text || params.topic || "").trim();
+  const wordCount = params.transcription?.words?.length || transcriptText.split(/\s+/).length || 60;
+  const wpm = Math.round(wordCount / (Math.max(1, totalDuration) / 60)) || 140;
 
-  const referenceScenes = buildMakerzzReferenceScenes(totalDuration);
+  const topicName = params.topic || transcriptText.slice(0, 45) || "Creative Reel";
+  const entities = extractTranscriptEntities(transcriptText);
+  const timedWords = (params.transcription?.words || [])
+    .slice(0, 700)
+    .map((word) => `${word.start.toFixed(2)} ${word.word}`)
+    .join(" | ");
 
-  const defaultPlan: AuteurEditPlan = {
-    headline: "Duniya Ka Sabse",
-    subAccent: "Bada Exchange Hack",
-    metricLabel: "users affected",
-    metricCount: 335387860,
-    steps: [
-      "01 / SABHI LOG PAISA",
-      "02 / BIDROL KARNE LAGE",
-      "03 / COMPANY MAIN BHI",
-    ],
-    platformCaption: `${transcriptText.slice(0, 140)}... Drop your thoughts below! 👇🔥 #crypto #binance #investing`,
-    scenes: referenceScenes,
-    researchVisits: [
-      {
-        url: "https://www.binance.com/zh-CN",
-        title: "币安: 全球最值得信赖的加密货币买卖和投资平台",
-        facts: [
-          "Binance describes itself as: 了解为什么币安是世界上最好的加密货币交易平台。安全、手续费低，深受全球数百万用户的信赖。",
-          "Main headline on the page: 335,387,860 用户的共同选择 “335,387,860 用户的 共同选择”",
-        ],
-        status: "verified",
-      },
-    ],
-    assets: [
-      {
-        assetId: "ast_shot_1",
-        badge: "screenshot",
-        title: "Screenshot of a public web page (cited source) · www.binance.com",
-        sourceUrl: "https://www.binance.com/zh-CN",
-        sceneIds: ["Scene 1", "Scene 2"],
-      },
-      {
-        assetId: "ast_cc_1",
-        badge: "cc_image",
-        title: "CC BY-SA 4.0 · Physical Bitcoin coin macro photography, via Wikimedia Commons",
-        sourceUrl: "https://commons.wikimedia.org/wiki/File:Bitcoin_physical_coin.jpg",
-        sceneIds: ["Scene 3"],
-      },
-      {
-        assetId: "ast_shot_2",
-        badge: "screenshot",
-        title: "Screenshot of a public web page (cited source) · www.binance.com",
-        sourceUrl: "https://www.binance.com/zh-CN",
-        sceneIds: ["Scene 2"],
-      },
-      {
-        assetId: "ast_rec_1",
-        badge: "recording",
-        title: "Browser recording (7s) · 3-Node FIU Registration & Deposit Safety Diagram",
-        sourceUrl: "https://www.binance.com/zh-CN",
-        sceneIds: ["Scene 5", "Scene 7"],
-      },
-    ],
-    checks: [
-      {
-        id: "frozen_picture",
-        label: "No frozen picture",
-        status: "warn",
-        detail: `no picture change ${(totalDuration * 0.71).toFixed(2)}–${(totalDuration * 0.8).toFixed(2)} s`,
-      },
-      {
-        id: "duration",
-        label: "Duration matches the plan (±0.2 s)",
-        status: "pass",
-        detail: `${(totalDuration - 0.012).toFixed(3)} s vs ${totalDuration.toFixed(2)} s`,
-      },
-      {
-        id: "resolution",
-        label: "Size and frame rate",
-        status: "pass",
-        detail: "1080×1920 @ 29.999 fps",
-      },
-      {
-        id: "audio_loudness",
-        label: "Audio present, about -14 LUFS",
-        status: "pass",
-        detail: "-14 LUFS, true peak -2 dBFS",
-      },
-      {
-        id: "black_frames",
-        label: "No black frames",
-        status: "pass",
-        detail: "none",
-      },
-      {
-        id: "captions",
-        label: "Captions follow the words",
-        status: "pass",
-        detail: `${Math.min(wordCount, 25)}/${Math.min(wordCount, 25)} sampled words in the caption on screen`,
-      },
-      {
-        id: "speech_audible",
-        label: "Speech audible at word times",
-        status: "pass",
-        detail: "12/12 sampled words audible",
-      },
-    ],
-    cadenceWordsPerMin: wpm,
-  };
+  // 1. If LLM is available, generate dynamic scene plan from the real transcript
+  const llmPrompt = `Create an edit plan for a ${params.styleName} vertical short (${totalDuration.toFixed(1)} seconds, ${wpm} words per minute).
+The transcript below is the source of truth. Do not add claims, statistics, quotes, CTAs, sources, or brands the speaker did not say. Use real transcript timestamps for scene boundaries. Group roughly one sentence per scene, usually 2.5–5.5 seconds, splitting at pauses when possible. Each scene must have a visually distinct treatment chosen from split-hook, browser-card, diagram, counter, steps, cta, coin-proof, freeze-slam. Counter/coin-proof may only use an exact number present in that scene's transcript. Keep on-screen text short and faithful to the spoken words. Return valid JSON only.
 
-  // Only invoke external LLM if a custom non-crypto topic was provided and valid API keys exist
-  const isCryptoTake =
-    transcriptText.toLowerCase().includes("binance") ||
-    transcriptText.toLowerCase().includes("duniya") ||
-    transcriptText.toLowerCase().includes("crypto");
+Transcript (${totalDuration.toFixed(1)}s):
+"${transcriptText}"
 
-  if (!isCryptoTake) {
-    try {
-      const rawJson = await callLLM(
-        `Segment this ${totalDuration.toFixed(1)}s transcript into 8 viral scenes in style ${params.styleName}: ${transcriptText}`
-      );
-      if (rawJson) {
-        const jsonMatch = rawJson.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (Array.isArray(parsed.scenes) && parsed.scenes.length > 0) {
-            return {
-              ...defaultPlan,
-              headline: parsed.headline || defaultPlan.headline,
-              subAccent: parsed.subAccent || defaultPlan.subAccent,
-              scenes: parsed.scenes,
-            };
-          }
+Word timestamps (seconds): ${timedWords || "unavailable"}
+
+Return JSON matching this exact structure:
+{
+  "headline": "Short punchy uppercase hook (max 4 words)",
+  "subAccent": "Contrasting subtitle (max 5 words)",
+  "metricLabel": "label for a key metric or fact mentioned",
+  "metricCount": null,
+  "steps": [],
+  "platformCaption": "Engaging social media post caption with hashtags",
+  "scenes": [
+    {
+      "sceneId": "s1",
+      "start": 0.0,
+      "end": 3.0,
+      "headline": "PUNCHY HOOK",
+      "subAccent": "KEY STATEMENT",
+      "objective": "Hook the viewer",
+      "visualType": "split-hook",
+      "badgeText": "STEP 01",
+      "onScreenText": ["WORDS FROM THIS SENTENCE", "ONLY IF SPOKEN"]
+    }
+  ]
+}`;
+
+  try {
+    const rawJson = await callLLM(llmPrompt);
+    if (rawJson) {
+      const match = rawJson.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        if (Array.isArray(parsed.scenes) && parsed.scenes.length >= 3) {
+          const researchVisits = buildDynamicResearchVisits(topicName, entities);
+          const assets = await buildDynamicAssets(topicName, researchVisits, parsed.scenes);
+          const checks = buildDynamicChecks(totalDuration, wordCount);
+          const spokenNumbers = new Set(entities.numbers.map((value) => Number(value.replace(/[^0-9]/g, ""))));
+          const proposedMetric = Number(parsed.metricCount);
+          const metricCount = Number.isFinite(proposedMetric) && spokenNumbers.has(proposedMetric)
+            ? proposedMetric
+            : 0;
+          const proposedMetricLabel = String(parsed.metricLabel || "").trim();
+          const metricLabel = metricCount && proposedMetricLabel && transcriptText.toLowerCase().includes(proposedMetricLabel.toLowerCase())
+            ? proposedMetricLabel
+            : metricCount ? "spoken number" : "";
+
+          return {
+            headline: (parsed.headline || "KEY INSIGHT").toUpperCase(),
+            subAccent: (parsed.subAccent || "THE BREAKDOWN").toUpperCase(),
+            metricLabel,
+            metricCount,
+            steps: Array.isArray(parsed.steps) && parsed.steps.length === 3
+              ? parsed.steps
+              : [fallbackSceneLabel(parsed.scenes[0]), fallbackSceneLabel(parsed.scenes[1]), fallbackSceneLabel(parsed.scenes[2])] as [string, string, string],
+            platformCaption: parsed.platformCaption || `${transcriptText.slice(0, 160)}... Drop your thoughts below! 👇🔥 #creator #reels #ai`,
+            scenes: parsed.scenes,
+            researchVisits,
+            assets,
+            checks,
+            cadenceWordsPerMin: wpm,
+          };
         }
       }
-    } catch {}
+    }
+  } catch (err: any) {
+    console.warn("[Rath Director] LLM call fell back to local director:", err?.message || err);
   }
 
-  return defaultPlan;
+  // 2. High-quality algorithmic scene plan derived directly from the real transcript
+  const fallbackScenes = buildDynamicScenesFromTranscript(
+    params.transcription || {
+      text: transcriptText,
+      duration: totalDuration,
+      language: params.language || "en",
+      words: [],
+      segments: [],
+    },
+    totalDuration,
+    topicName
+  );
+
+  const researchVisits = buildDynamicResearchVisits(topicName, entities);
+  const assets = await buildDynamicAssets(topicName, researchVisits, fallbackScenes);
+  const checks = buildDynamicChecks(totalDuration, wordCount);
+
+  const topH1 = fallbackScenes[0]?.headline || "KEY INSIGHT";
+  const topH2 = fallbackScenes[0]?.subAccent || "THE BREAKDOWN";
+
+  return {
+    headline: topH1,
+    subAccent: topH2,
+    metricLabel: entities.numbers[0] ? "spoken number" : "",
+    metricCount: entities.numbers[0] ? parseInt(entities.numbers[0].replace(/[^0-9]/g, "")) || 0 : 0,
+    steps: [
+      `01 / ${fallbackScenes[0]?.headline || "The Hook"}`,
+      `02 / ${fallbackScenes[1]?.headline || "The Insight"}`,
+      `03 / ${fallbackScenes[2]?.headline || "The Takeaway"}`,
+    ],
+    platformCaption: `${transcriptText.slice(0, 160)}... Let me know your thoughts in the comments! 👇🚀 #${(entities.keyTopics[0] || "content").toLowerCase()} #reels #automation`,
+    scenes: fallbackScenes,
+    researchVisits,
+    assets,
+    checks,
+    cadenceWordsPerMin: wpm,
+  };
 }
+
+/** Backward compatibility alias */
+export const planVideoWithAuteur = planVideoWithRath;

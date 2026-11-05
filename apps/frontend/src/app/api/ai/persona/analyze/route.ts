@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
         analyzed_posts_count: Number(max_posts),
         analyzed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        updated_by_user: { full_name: "Workspace Member", email: "team@posteady.com" },
+        updated_by_user: { full_name: "Workspace Member", email: "team@reerts.com" },
         language: language || "en",
         content_language: content_language || "en",
         sentence_structure_keep_original: false,

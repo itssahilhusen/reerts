@@ -344,7 +344,7 @@ export function ConversationsView() {
         </div>
       </div>
 
-      {/* Posteady Sub-Tabs Row: Comments, @ Mentions, By post, Table + Connected Accounts */}
+      {/* Reerts Sub-Tabs Row: Comments, @ Mentions, By post, Table + Connected Accounts */}
       <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-4 shrink-0 select-none">
         <div className="flex items-center gap-5 text-sm">
           <button

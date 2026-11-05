@@ -5,13 +5,14 @@ import os from "os";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import {
+  RathEditPlan,
   AuteurEditPlan,
   PlannedScene,
 } from "./gemini-video-pipeline";
-import { buildAuteurAssScript, getStyleVisualConfig } from "./auteur-ass-composer";
+import { buildRathAssScript, buildAuteurAssScript, getStyleVisualConfig } from "./auteur-ass-composer";
 import { getFfmpegPath, getFfprobePath } from "./media-tool-paths";
 import { removeVideoBackgroundWithReplicate } from "./video-background-removal";
-import type { LimeAuteurEditPlan } from "./lime-director-schema";
+import type { LimeRathEditPlan, LimeAuteurEditPlan } from "./lime-director-schema";
 
 const ffmpegBinary = getFfmpegPath();
 if (ffmpegBinary && fs.existsSync(ffmpegBinary)) {
@@ -147,7 +148,7 @@ export interface RenderProjectOptions {
   projectId: string;
   videoRelPath: string;
   styleId: string;
-  plan?: LimeAuteurEditPlan;
+  plan?: LimeRathEditPlan;
   transcriptWords?: Array<{ word: string; start: number; end: number }>;
   headline?: string;
   subAccent?: string;
@@ -213,7 +214,7 @@ function prepareRenderScenes(
 }
 
 /**
- * Composite and render the video into the exact selected Makerzz Studio style (all 56 styles supported)
+ * Composite and render the video into the exact selected Reerts Studio style (all 56 styles supported)
  * using:
  * 1. Base 1080x1920 canvas in the style's exact palette with architectural grid lines.
  * 2. Speaker framing geometry tailored per style family:
@@ -258,7 +259,7 @@ export async function renderProjectVideo(
     }
   };
 
-  // High-fidelity Lime Slides Engine matching Makerzz Studio frame-by-frame
+  // High-fidelity Lime Slides Engine matching Reerts Studio frame-by-frame
   if (styleId === "limeslides" || styleId === "cap-slides") {
     try {
       console.log("[Video Renderer] Delegating to high-fidelity Lime Slides Engine...");
@@ -287,8 +288,8 @@ export async function renderProjectVideo(
   const renderScenes = prepareRenderScenes(plan?.scenes, limitSec);
 
   // 1. Build ASS subtitle script with full multi-scene graphic overlays & karaoke captions
-  const assFilePath = path.join(os.tmpdir(), `auteur_${safeId}.ass`);
-  const assContent = buildAuteurAssScript({
+  const assFilePath = path.join(os.tmpdir(), `rath_${safeId}.ass`);
+  const assContent = buildRathAssScript({
     styleId,
     durationSec: limitSec,
     plan: plan ? { ...plan, scenes: renderScenes } : undefined,
@@ -341,6 +342,7 @@ export async function renderProjectVideo(
         .complexFilter(complexFilter)
         .audioFilters("loudnorm=I=-14.1:TP=-2.0:LRA=11,aresample=44100")
         .outputOptions([
+          "-threads 0",
           "-map [outv]",
           "-map 0:a?",
           "-c:v libx264",

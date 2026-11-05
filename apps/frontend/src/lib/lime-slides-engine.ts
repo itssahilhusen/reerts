@@ -3,16 +3,16 @@ import path from "path";
 import os from "os";
 import { exec, execFile } from "child_process";
 import { promisify } from "util";
-import type { LimeAssetRequest, LimeAuteurEditPlan, LimeSceneBeat } from "./lime-director-schema";
+import type { LimeAssetRequest, LimeRathEditPlan, LimeAuteurEditPlan, LimeSceneBeat } from "./lime-director-schema";
 import { limeAssetRequestSchema, reviseLimeBeat } from "./lime-director-schema";
 import { resolveLimeAssets, resolveLimeAsset, type LimeResolvedAsset } from "./lime-assets";
 import { authorLimeSceneSpecs } from "./lime-scene-spec";
 import { assertRealSceneCopy, chunkLimeCaptions } from "./lime-render-utils";
 import { buildFaceAwareSpeakerFilter, detectSpeakerFaceTrack } from "./lime-face-tracking";
 import { getFfmpegPath, getFfprobePath } from "./media-tool-paths";
-import { renderLimeSceneClips, TimedLimeScene } from "./lime-remotion/render-scenes";
+import { renderLimeSceneClips, renderLimeSceneStills, TimedLimeScene } from "./lime-remotion/render-scenes";
 import type { LimeSceneType, LimeSpeakerMode, LimeIllustrationName } from "./lime-remotion/LimeScene";
-import { LimeQualityReport, checkLimeRender } from "./lime-quality-check";
+import { LimeQualityReport, LimeQualityScene, checkLimeSceneClips } from "./lime-quality-check";
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -89,7 +89,7 @@ function escapeHtml(value: string | undefined, fallback = ""): string {
 
 /**
  * Builds the exact HTML/CSS string for each Lime Slides scene type
- * matching Makerzz Studio frame-by-frame.
+ * matching Reerts Studio frame-by-frame.
  */
 export function buildLimeSceneHtml(scene: LimeSceneData): string {
   const headline = assertRealSceneCopy(scene.headline, "Headline");
@@ -678,10 +678,10 @@ export function buildLimeSceneHtml(scene: LimeSceneData): string {
 }
 
 /**
- * Maps planned scenes from Gemini/Auteur into high-fidelity Lime Slides scene data.
+ * Maps planned scenes from Gemini/Rath into high-fidelity Lime Slides scene data.
  */
 export function mapPlanToLimeScenes(
-  plan: LimeAuteurEditPlan | undefined,
+  plan: LimeRathEditPlan | undefined,
   durationSec: number,
   transcriptWords: Array<{ word: string; start: number; end: number }> = []
 ): LimeSceneData[] {
@@ -934,7 +934,7 @@ export async function renderLimePlatesToDisk(
 }
 
 /**
- * Generates the white subtitle pill ASS script matching Makerzz Lime Slides.
+ * Generates the white subtitle pill ASS script matching Reerts Lime Slides.
  */
 export function buildLimeSubtitlesAss(
   transcriptWords: Array<{ word: string; start: number; end: number }>,
@@ -949,7 +949,7 @@ export function buildLimeSubtitlesAss(
   };
 
   const header = `[Script Info]
-Title: Makerzz Lime Slides Native Subtitles
+Title: Reerts Lime Slides Native Subtitles
 ScriptType: v4.00+
 PlayResX: 1080
 PlayResY: 1920
@@ -973,13 +973,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 }
 
 /**
- * High-performance full Lime Slides video compositing engine matching Makerzz Studio.
+ * High-performance full Lime Slides video compositing engine matching Reerts Studio.
  */
 export async function renderLimeSlidesVideo(options: {
   projectId: string;
   absVideoPath: string;
   outputPath: string;
-  plan?: LimeAuteurEditPlan;
+  plan?: LimeRathEditPlan;
   transcriptWords?: Array<{ word: string; start: number; end: number }>;
   durationSec: number;
   cutoutVideo?: boolean;
@@ -1015,6 +1015,9 @@ export async function renderLimeSlidesVideo(options: {
   const initialRender = await renderLimeSceneClips(remotionScenes, safeId);
   let clips = initialRender.clips;
   const clipDirectories = [initialRender.directory];
+  const initialStills = await renderLimeSceneStills(remotionScenes, safeId);
+  let stills = initialStills.stills;
+  const stillDirectories = [initialStills.directory];
 
   // Generate white subtitle pills ASS
   const assContent = buildLimeSubtitlesAss(transcriptWords || [], durationSec);
@@ -1098,15 +1101,33 @@ export async function renderLimeSlidesVideo(options: {
     emphasisWords: scene.emphasisWords, assetIntent: limeScenes[index].assetIntent || scene.headline,
     assetRequest: limeScenes[index].assetRequest,
   }));
+  const qualityScenes: LimeQualityScene[] = qualityBeats.map((beat, index) => ({
+    beat,
+    asset: remotionScenes[index].asset || null,
+    sceneSpec: remotionScenes[index].sceneSpec || null,
+  }));
+
+  const checkQuality = () => checkLimeSceneClips({
+    sourceVideoPath: absVideoPath,
+    scenes: qualityScenes,
+    stillPaths: stills.map((scene) => scene.paths),
+    sceneClipPaths: clips.map((clip) => clip.path),
+    transcriptWords: transcriptWords || [],
+    durationSec,
+    faceTrackCoverage,
+    faceFallbackContain,
+    renderMs: Date.now() - renderStartedAt,
+  });
 
   try {
     await compose();
-    let report = await checkLimeRender({ outputPath, beats: qualityBeats, transcriptWords: transcriptWords || [], durationSec, faceTrackCoverage, faceFallbackContain, renderMs: Date.now() - renderStartedAt });
+    let report = await checkQuality();
     for (let retry = 0; report.failedScenes.length && retry < 2; retry++) {
       const retryIndexes = report.failedScenes.map((item) => item.index);
       for (const index of retryIndexes) {
         const revised = await reviseLimeBeat(qualityBeats[index], report.failedScenes.find((item) => item.index === index)!.failures);
         qualityBeats[index] = revised;
+        qualityScenes[index].beat = revised;
         remotionScenes[index] = {
           ...remotionScenes[index], sceneType: revised.sceneType, speakerMode: revised.speakerMode,
           headline: revised.headline, badge: revised.badge, illustration: revised.illustration,
@@ -1117,8 +1138,15 @@ export async function renderLimeSlidesVideo(options: {
       const retried = await renderLimeSceneClips(retryIndexes.map((index) => remotionScenes[index]), `${safeId}-retry-${retry + 1}`);
       clipDirectories.push(retried.directory);
       retryIndexes.forEach((index, retryIndex) => { clips[index] = { ...clips[index], path: retried.clips[retryIndex].path, scene: remotionScenes[index] }; });
+      const retriedStills = await renderLimeSceneStills(retryIndexes.map((index) => remotionScenes[index]), `${safeId}-retry-${retry + 1}`);
+      stillDirectories.push(retriedStills.directory);
+      retryIndexes.forEach((index, retryIndex) => {
+        stills[index] = retriedStills.stills[retryIndex];
+        qualityScenes[index].asset = remotionScenes[index].asset || null;
+        qualityScenes[index].sceneSpec = remotionScenes[index].sceneSpec || null;
+      });
       await compose();
-      report = await checkLimeRender({ outputPath, beats: qualityBeats, transcriptWords: transcriptWords || [], durationSec, faceTrackCoverage, faceFallbackContain, renderMs: Date.now() - renderStartedAt });
+      report = await checkQuality();
     }
     lastLimeQualityReport = { ...report, numbers: { ...report.numbers, renderMs: Date.now() - renderStartedAt } };
     console.info(`[Lime Slides] Render report: ${report.numbers.visualChanges} visual changes / ${durationSec.toFixed(1)}s; max ${report.numbers.maxCaptionActive} active captions; face framing ${report.numbers.faceInsideCropPercent.toFixed(1)}%; motion ${report.numbers.motionCoveragePercent == null ? "not measured" : `${report.numbers.motionCoveragePercent.toFixed(1)}%`}; ${(lastLimeQualityReport.numbers.renderMs / 1000).toFixed(2)}s render.`);
@@ -1128,6 +1156,9 @@ export async function renderLimeSlidesVideo(options: {
     }
   } finally {
     for (const directory of clipDirectories) {
+      try { fs.rmSync(directory, { recursive: true, force: true }); } catch {}
+    }
+    for (const directory of stillDirectories) {
       try { fs.rmSync(directory, { recursive: true, force: true }); } catch {}
     }
     try { if (fs.existsSync(assPath)) fs.unlinkSync(assPath); } catch {}

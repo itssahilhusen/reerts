@@ -2,7 +2,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { bundle } from "@remotion/bundler";
-import { renderMedia, selectComposition } from "@remotion/renderer";
+import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import { LimeSceneProps } from "./LimeScene";
 
 export interface TimedLimeScene extends LimeSceneProps {
@@ -14,6 +14,11 @@ export interface RenderedLimeScene {
   path: string;
   start: number;
   end: number;
+  scene: TimedLimeScene;
+}
+
+export interface RenderedLimeSceneStills {
+  paths: string[];
   scene: TimedLimeScene;
 }
 
@@ -74,23 +79,94 @@ function resolveBrowserExecutable() {
   return candidates.find((candidate) => fs.existsSync(candidate)) || null;
 }
 
+// Cache Remotion webpack bundle across stills and clips to eliminate 15-20s of duplicate compilation
+let cachedLimeBundle: { serveUrl: string; directory: string; entryMtime: number } | null = null;
+let bundlingPromise: Promise<string> | null = null;
+
+export async function getOrBundleLimeServeUrl(): Promise<string> {
+  const entryPoint = resolveLimeRemotionEntryPoint();
+  let entryMtime = 0;
+  try {
+    entryMtime = fs.statSync(entryPoint).mtimeMs;
+  } catch {}
+
+  if (cachedLimeBundle && cachedLimeBundle.entryMtime === entryMtime && fs.existsSync(cachedLimeBundle.serveUrl)) {
+    return cachedLimeBundle.serveUrl;
+  }
+  if (bundlingPromise) return bundlingPromise;
+
+  bundlingPromise = (async () => {
+    try {
+      const bundleDir = fs.mkdtempSync(path.join(os.tmpdir(), "lime-bundle-cache-"));
+      const publicDir = path.join(bundleDir, "public");
+      const publicFontsDir = path.join(publicDir, "fonts");
+      fs.mkdirSync(publicFontsDir, { recursive: true });
+      const sourceFontsDir = resolveLimeFontDirectory();
+      for (const fontName of ["Anton-Regular.ttf", "Montserrat-Variable.ttf", "Montserrat-ExtraBold.ttf"]) {
+        fs.copyFileSync(path.join(sourceFontsDir, fontName), path.join(publicFontsDir, fontName));
+      }
+      const serveUrl = await bundle({ entryPoint, outDir: path.join(bundleDir, "bundle"), publicDir });
+      cachedLimeBundle = { serveUrl, directory: bundleDir, entryMtime };
+      return serveUrl;
+    } finally {
+      bundlingPromise = null;
+    }
+  })();
+
+  return bundlingPromise;
+}
+
+/** Render three isolated Remotion stills for each beat before compositing. */
+export async function renderLimeSceneStills(
+  scenes: TimedLimeScene[],
+  projectId: string,
+  providedServeUrl?: string
+): Promise<{ stills: RenderedLimeSceneStills[]; directory: string; renderMs: number }> {
+  const startedAt = Date.now();
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), `lime-stills-${projectId}-`));
+  const stills: RenderedLimeSceneStills[] = new Array(scenes.length);
+  try {
+    const serveUrl = providedServeUrl || (await getOrBundleLimeServeUrl());
+    const browserExecutable = resolveBrowserExecutable();
+    await runPool(scenes, 2, async (scene, index) => {
+      const durationInFrames = Math.max(1, Math.round((scene.end - scene.start) * 30));
+      const inputProps: LimeSceneProps = { ...scene, durationInFrames };
+      const composition = await selectComposition({ serveUrl, id: "LimeScene", inputProps: inputProps as any, browserExecutable });
+      const frames = [...new Set([0.12, 0.5, 0.88].map((fraction) => Math.max(0, Math.min(durationInFrames - 1, Math.round((durationInFrames - 1) * fraction)))))];
+      const paths: string[] = [];
+      for (const [sampleIndex, frame] of frames.entries()) {
+        const output = path.join(directory, `scene-${String(index).padStart(3, "0")}-still-${sampleIndex}.png`);
+        await renderStill({
+          composition,
+          serveUrl,
+          output,
+          frame,
+          imageFormat: "png",
+          inputProps: inputProps as any,
+          browserExecutable,
+          chromiumOptions: { gl: "angle" },
+          logLevel: "error",
+        });
+        if (!fs.existsSync(output)) throw new Error(`Remotion did not write still ${sampleIndex + 1} for scene ${index + 1}.`);
+        paths.push(output);
+      }
+      stills[index] = { paths, scene };
+    });
+  } catch (error) {
+    fs.rmSync(directory, { recursive: true, force: true });
+    throw error;
+  }
+  return { stills, directory, renderMs: Date.now() - startedAt };
+}
+
 export async function renderLimeSceneClips(
   scenes: TimedLimeScene[],
-  projectId: string
+  projectId: string,
+  providedServeUrl?: string
 ): Promise<{ clips: RenderedLimeScene[]; directory: string; renderMs: number }> {
   const startedAt = Date.now();
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), `lime-remotion-${projectId}-`));
-  const entryPoint = resolveLimeRemotionEntryPoint();
-  // Scene visuals are inline SVG. Stage only the fonts instead of copying the
-  // app's upload-heavy public directory into each temporary Remotion bundle.
-  const publicDir = path.join(directory, "public");
-  const publicFontsDir = path.join(publicDir, "fonts");
-  fs.mkdirSync(publicFontsDir, { recursive: true });
-  const sourceFontsDir = resolveLimeFontDirectory();
-  for (const fontName of ["Anton-Regular.ttf", "Montserrat-Variable.ttf", "Montserrat-ExtraBold.ttf"]) {
-    fs.copyFileSync(path.join(sourceFontsDir, fontName), path.join(publicFontsDir, fontName));
-  }
-  const serveUrl = await bundle({ entryPoint, outDir: path.join(directory, "bundle"), publicDir });
+  const serveUrl = providedServeUrl || (await getOrBundleLimeServeUrl());
   const clips: RenderedLimeScene[] = new Array(scenes.length);
   const browserExecutable = resolveBrowserExecutable();
 

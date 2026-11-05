@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { TranscriptionResult } from "./groq-transcriber";
-import type { AuteurEditPlan, PlannedScene } from "./gemini-video-pipeline";
+import type { RathEditPlan, AuteurEditPlan, PlannedScene } from "./gemini-video-pipeline";
 
 export const LIME_SCENE_TYPES = ["HALO_SPEAKER", "FULL_GRAPHIC", "SPLIT_SPEAKER", "SPEAKER_STICKER", "NUMBERED_STEP", "CTA"] as const;
 export const LIME_ILLUSTRATIONS = ["phone", "carousel", "line_chart", "gear_diagram", "swatches", "calendar", "video_player", "editor_window", "primitive"] as const;
@@ -47,7 +47,9 @@ export const limeDirectorSchema = z.object({
 
 export type LimeSceneBeat = z.infer<typeof limeBeatSchema>;
 export type LimeDirectorPlan = z.infer<typeof limeDirectorSchema>;
-export type LimeAuteurEditPlan = AuteurEditPlan & { limeBeats?: LimeSceneBeat[] };
+export type LimeRathEditPlan = RathEditPlan & { limeBeats?: LimeSceneBeat[] };
+/** Backward compatibility alias */
+export type LimeAuteurEditPlan = LimeRathEditPlan;
 export interface LimeTranscriptSegment {
   startMs: number;
   endMs: number;
@@ -55,7 +57,7 @@ export interface LimeTranscriptSegment {
   words: TranscriptionResult["words"];
 }
 
-export function toAuteurEditPlan(plan: LimeDirectorPlan): LimeAuteurEditPlan {
+export function toRathEditPlan(plan: LimeDirectorPlan): LimeRathEditPlan {
   const scenes: PlannedScene[] = plan.beats.map((beat, index) => ({
     sceneId: `lime_beat_${index + 1}`,
     start: beat.startMs / 1000,
@@ -87,6 +89,9 @@ export function toAuteurEditPlan(plan: LimeDirectorPlan): LimeAuteurEditPlan {
     limeBeats: plan.beats,
   };
 }
+
+/** Backward compatibility alias */
+export const toAuteurEditPlan = toRathEditPlan;
 
 const STOP_WORDS = new Set("a an and are as at be been but by can could did do does for from had has have he her here hers him his how i if in into is it its just me my no not of on or our out she so than that the their them then there these they this those through to up us was we were what when where which who why will with would you your".split(" "));
 const STEP_WORDS: Record<string, number> = {

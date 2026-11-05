@@ -93,62 +93,146 @@ function ensureFile(filePath: string, defaultData: any) {
     if (!fs.existsSync(filePath)) {
       const dir = path.dirname(filePath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2), "utf8");
+      fs.writeFileSync(filePath, JSON.stringify(defaultData), "utf8");
     }
   } catch (err) {
     console.error("Failed to ensure store file:", err);
   }
 }
 
-export function getAllVideoProjects(): VideoProjectRecord[] {
+// High-performance in-memory cache layer to eliminate repetitive 450KB disk reads and event-loop lag
+let cachedProjects: VideoProjectRecord[] | null = null;
+let projectMap = new Map<string, VideoProjectRecord>();
+let cachedMtime = 0;
+let storeVersion = Date.now();
+let pendingWriteTimer: NodeJS.Timeout | null = null;
+
+function flushProjectsToDisk() {
+  if (pendingWriteTimer) {
+    clearTimeout(pendingWriteTimer);
+    pendingWriteTimer = null;
+  }
+  if (!cachedProjects) return;
+  try {
+    const jsonStr = JSON.stringify(cachedProjects);
+    fs.writeFileSync(STORE_PATH, jsonStr, "utf8");
+    try {
+      cachedMtime = fs.statSync(STORE_PATH).mtimeMs;
+    } catch {}
+  } catch (err) {
+    console.error("Error writing video projects store:", err);
+  }
+}
+
+function loadProjectsFromDisk(): VideoProjectRecord[] {
   ensureFile(STORE_PATH, []);
   try {
+    const stat = fs.statSync(STORE_PATH);
+    if (cachedProjects && stat.mtimeMs === cachedMtime) {
+      return cachedProjects;
+    }
     const raw = fs.readFileSync(STORE_PATH, "utf8");
     const list: VideoProjectRecord[] = JSON.parse(raw);
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    cachedProjects = list;
+    cachedMtime = stat.mtimeMs;
+    projectMap.clear();
+    for (const p of list) {
+      projectMap.set(p.id, p);
+    }
+    return cachedProjects;
   } catch {
+    cachedProjects = [];
     return [];
   }
 }
 
+export function getVideoProjectsStoreVersion(): string {
+  if (!cachedProjects) {
+    loadProjectsFromDisk();
+  }
+  return `"${storeVersion}_${cachedProjects?.length || 0}"`;
+}
+
+export function getAllVideoProjects(): VideoProjectRecord[] {
+  if (!cachedProjects) {
+    return loadProjectsFromDisk();
+  }
+  // Check if file was modified externally
+  try {
+    const stat = fs.statSync(STORE_PATH);
+    if (stat.mtimeMs !== cachedMtime && !pendingWriteTimer) {
+      return loadProjectsFromDisk();
+    }
+  } catch {}
+  return cachedProjects;
+}
+
 export function getVideoProjectById(id: string): VideoProjectRecord | null {
-  const projects = getAllVideoProjects();
-  return projects.find((p) => p.id === id) || null;
+  if (!cachedProjects) {
+    loadProjectsFromDisk();
+  }
+  return projectMap.get(id) || null;
 }
 
 export function saveVideoProject(project: VideoProjectRecord): VideoProjectRecord {
   const projects = getAllVideoProjects();
   const existingIdx = projects.findIndex((p) => p.id === project.id);
+  const updatedProject = {
+    ...(existingIdx >= 0 ? projects[existingIdx] : {}),
+    ...project,
+    updatedAt: new Date().toISOString(),
+  };
+
   if (existingIdx >= 0) {
-    projects[existingIdx] = { ...projects[existingIdx], ...project, updatedAt: new Date().toISOString() };
+    projects[existingIdx] = updatedProject;
   } else {
-    projects.unshift(project);
+    projects.unshift(updatedProject);
   }
 
-  try {
-    fs.writeFileSync(STORE_PATH, JSON.stringify(projects, null, 2), "utf8");
-  } catch (err) {
-    console.error("Error writing video projects store:", err);
+  projectMap.set(updatedProject.id, updatedProject);
+  storeVersion = Date.now();
+
+  // Asynchronous debounced write to avoid blocking the event loop on rapid pipeline updates
+  if (!pendingWriteTimer) {
+    pendingWriteTimer = setTimeout(() => {
+      flushProjectsToDisk();
+    }, 100);
   }
-  return project;
+
+  return updatedProject;
 }
 
 export function deleteVideoProject(id: string): boolean {
   const projects = getAllVideoProjects();
   const filtered = projects.filter((p) => p.id !== id);
+  cachedProjects = filtered;
+  projectMap.delete(id);
+  storeVersion = Date.now();
+
   try {
-    fs.writeFileSync(STORE_PATH, JSON.stringify(filtered, null, 2), "utf8");
+    flushProjectsToDisk();
     return true;
   } catch {
     return false;
   }
 }
 
+// BrandKit caching
+let cachedBrandKit: BrandKitSettings | null = null;
+let cachedBrandKitMtime = 0;
+
 export function getSavedBrandKit(): BrandKitSettings {
   ensureFile(BRANDKIT_PATH, DEFAULT_BRAND_KIT);
   try {
+    const stat = fs.statSync(BRANDKIT_PATH);
+    if (cachedBrandKit && stat.mtimeMs === cachedBrandKitMtime) {
+      return cachedBrandKit;
+    }
     const raw = fs.readFileSync(BRANDKIT_PATH, "utf8");
-    return JSON.parse(raw);
+    cachedBrandKit = JSON.parse(raw);
+    cachedBrandKitMtime = stat.mtimeMs;
+    return cachedBrandKit || DEFAULT_BRAND_KIT;
   } catch {
     return DEFAULT_BRAND_KIT;
   }
@@ -156,8 +240,12 @@ export function getSavedBrandKit(): BrandKitSettings {
 
 export function saveBrandKit(kit: BrandKitSettings): BrandKitSettings {
   ensureFile(BRANDKIT_PATH, DEFAULT_BRAND_KIT);
+  cachedBrandKit = kit;
   try {
-    fs.writeFileSync(BRANDKIT_PATH, JSON.stringify(kit, null, 2), "utf8");
+    fs.writeFileSync(BRANDKIT_PATH, JSON.stringify(kit), "utf8");
+    try {
+      cachedBrandKitMtime = fs.statSync(BRANDKIT_PATH).mtimeMs;
+    } catch {}
   } catch (err) {
     console.error("Error writing brandkit store:", err);
   }

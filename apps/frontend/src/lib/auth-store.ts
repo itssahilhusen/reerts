@@ -19,7 +19,7 @@ const DEFAULT_USERS: StoredUser[] = [
   {
     id: "usr_demo_1",
     name: "Alex Rivers",
-    email: "demo@posteady.com",
+    email: "demo@reerts.com",
     passwordHash: bcrypt.hashSync("password123", 10),
     role: "OWNER",
     workspaceId: "ws_default",
